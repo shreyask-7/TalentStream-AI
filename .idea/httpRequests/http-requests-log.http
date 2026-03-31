@@ -3,6 +3,32 @@ User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2026.1
 Accept-Encoding: br, deflate, gzip, x-gzip
 Accept: */*
 
+<> 2026-03-30T234750.200.json
+
+###
+
+POST http://localhost:8080/api/jobs
+Content-Type: application/json
+Content-Length: 158
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2026.1
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "title": "Software Engineer Intern",
+  "description": "Looking for a fresher with strong DSA skills and Java knowledge.",
+  "company": "TalentStream AI"
+}
+
+<> 2026-03-30T234737.200.json
+
+###
+
+GET http://localhost:8080/api/jobs
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2026.1
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
 <> 2026-03-30T222940.200.json
 
 ###
