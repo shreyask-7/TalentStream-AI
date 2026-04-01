@@ -2,11 +2,12 @@ package com.talentstream.backend;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/jobs")
-@CrossOrigin(origins = "http://localhost:5173")
 public class JobController {
 
     @Autowired
@@ -20,5 +21,10 @@ public class JobController {
     @GetMapping
     public List<Job> getJobs() {
         return jobsService.findAll();
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteJob(@PathVariable Long id) {
+        jobsService.delete(id);
     }
 }

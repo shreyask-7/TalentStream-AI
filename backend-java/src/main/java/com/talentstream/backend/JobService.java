@@ -17,4 +17,8 @@ public class JobService {
     public List<Job> findAll() {
         return jobRepository.findAll();
     }
+
+    public void delete(Long id) {
+        jobRepository.deleteById(id);
+    }
 }

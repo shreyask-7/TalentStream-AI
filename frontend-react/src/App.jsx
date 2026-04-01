@@ -1,88 +1,82 @@
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import axios from "axios";
+import JobCard from "./components/JobCard.jsx";
 
 function App() {
-  const [job, setJob] = useState({
-    title: "",
-    company: "",
-    description: "",
-  });
+  const [jobs, setJobs] = useState([]);
+  const [form, setForm] = useState({ title: '', company: '', description: '' });
+
+  const fetchJobs = async () => {
+    try {
+      const response = await axios.get('http://localhost:8080/api/jobs');
+      setJobs(response.data);
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
 
   const handleChange = (e) => {
-    setJob({ ...job, [e.target.name]: e.target.value });
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://localhost:8080/api/jobs", job);
-      alert("Job Posted Successfully! ID: " + response.data.id);
-      setJob({ title: "", company: "", description: "" });
+      await axios.post("http://localhost:8080/api/jobs", form);
+      setForm({ title: '', company: '', description: '' });
+      fetchJobs();
     } catch (error) {
-      console.error("Error posting job:", error);
-      alert("Failed to connect to backend. Check CORS!");
+      alert("Check CORS or Backend Status!");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    console.log("Attempting to delete Job ID:", id);
+    if(window.confirm("Are you sure you want to delete this job?")) {
+      try {
+        await axios.delete(`http://localhost:8080/api/jobs/${id}`);
+        fetchJobs();
+      } catch (error) {
+        console.error("Error deleting job:", error);
+        alert("Delete failed!");
+      }
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-6">
-      <div className="max-w-md w-full bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700">
-        <h2 className="text-3xl font-bold mb-6 text-blue-400">
-          Post a New Job
-        </h2>
+      <div className="min-h-screen bg-gray-900 text-white p-8">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-400">
-              Job Title
-            </label>
-            <input
-              name="title"
-              value={job.title}
-              onChange={handleChange}
-              className="w-full mt-1 p-2 bg-gray-700 rounded border border-gray-600 focus:outline-none focus:border-blue-500"
-              placeholder="e.g. Software Engineer"
-              required
-            />
+          {/* --- Left Column: Post Job Form --- */}
+          <div className="lg:col-span-1">
+            <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 sticky top-8">
+              <h2 className="text-2xl font-bold mb-6 text-blue-400">Post a Job</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <input name="title" value={form.title} onChange={handleChange} placeholder="Job Title" className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 outline-none" required />
+                <input name="company" value={form.company} onChange={handleChange} placeholder="Company" className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 outline-none" required />
+                <textarea name="description" value={form.description} onChange={handleChange} placeholder="Description" className="w-full p-2 bg-gray-700 rounded border border-gray-600 h-32 focus:border-blue-500 outline-none" required />
+                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 py-2 rounded-lg font-bold transition">Post Job 🚀</button>
+              </form>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-400">
-              Company
-            </label>
-            <input
-              name="company"
-              value={job.company}
-              onChange={handleChange}
-              className="w-full mt-1 p-2 bg-gray-700 rounded border border-gray-600 focus:outline-none focus:border-blue-500"
-              placeholder="e.g. TalentStream AI"
-              required
-            />
+          {/* --- Right Column: Job Feed --- */}
+          <div className="lg:col-span-2">
+            <h2 className="text-2xl font-bold mb-6 text-gray-300">Live Job Feed</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {jobs.map(job => (
+                  <JobCard key={job.id} job={job} onDelete={handleDelete}/>
+              ))}
+            </div>
+            {jobs.length === 0 && <p className="text-gray-500 italic">No jobs posted yet...</p>}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-400">
-              Description
-            </label>
-            <textarea
-              name="description"
-              value={job.description}
-              onChange={handleChange}
-              className="w-full mt-1 p-2 bg-gray-700 rounded border border-gray-600 focus:outline-none focus:border-blue-500 h-32"
-              placeholder="Describe the role..."
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-500 py-2 rounded-lg font-bold transition duration-200"
-          >
-            Post Job 🚀
-          </button>
-        </form>
+        </div>
       </div>
-    </div>
   );
 }
 
