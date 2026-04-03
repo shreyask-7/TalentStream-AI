@@ -1,20 +1,33 @@
+import spacy
 from fastapi import FastAPI
-from typing import List
-import re
+from pydantic import BaseModel
+
+nlp = spacy.load("en_core_web_md")
+
+ruler = nlp.add_pipe("entity_ruler", before="ner")
+
+tech_patterns = [
+    {"label": "TECH_SKILL", "pattern": "Databricks"},
+    {"label": "TECH_SKILL", "pattern": "AWS"},
+    {"label": "TECH_SKILL", "pattern": [{"LOWER": "llms"}]},
+    {"label": "TECH_SKILL", "pattern": [{"LOWER": "llm"}]},
+    {"label": "TECH_SKILL", "pattern": "Java"},
+    {"label": "TECH_SKILL", "pattern": "Spring Boot"}
+]
+
+ruler.add_patterns(tech_patterns)
 
 app = FastAPI()
 
-COMMON_SKILLS = ["Java", "Python", "React", "SQL", "Docker", "AWS", "Spring Boot", "DSA"]
-
-@app.get("/")
-def home():
-    return {"message": "TalentStream AI Service is Online"}
+class JobDescription(BaseModel):
+    description: str
 
 @app.post("/extract-skills")
-async def extract_skills(data: dict):
-    text = data.get("description", "").lower()
-    found_skills = []
-    for skill in COMMON_SKILLS:
-        if re.search(rf"\b{skill.lower()}\b", text):
-            found_skills.append(skill)
-    return {"skills": found_skills}
+async def extract_skills(job: JobDescription):
+    doc = nlp(job.description)
+    extracted_terms = []
+
+    for ent in doc.ents:
+        if ent.label_ in ["ORG", "PRODUCT", "TECH_SKILL"]:
+            extracted_terms.append(ent.text)
+    return {"skills": list(set(extracted_terms))}

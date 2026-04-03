@@ -2,6 +2,7 @@ package com.talentstream.backend;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import java.util.List;
 
 @Entity
 @Table(name = "jobs")
@@ -18,4 +19,9 @@ public class Job {
     private String description;
 
     private String company;
+
+    @ElementCollection
+    @CollectionTable(name = "job_skills", joinColumns = @JoinColumn(name = "job_id"))
+    @Column(name = "skills")
+    private List<String> skills;
 }
