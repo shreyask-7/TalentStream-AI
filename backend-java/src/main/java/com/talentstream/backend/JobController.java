@@ -27,4 +27,9 @@ public class JobController {
     public void deleteJob(@PathVariable Long id) {
         jobsService.delete(id);
     }
+
+    @PutMapping("/{id}/skills")
+    public void updateSkills(@PathVariable("id") Long id, @RequestBody List<String> skills) {
+        jobsService.updateJobSkills(id, skills);
+    }
 }

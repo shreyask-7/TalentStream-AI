@@ -1,44 +1,27 @@
 package com.talentstream.backend;
 
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import java.util.Map;
 import java.util.List;
-import java.util.HashMap;
+import java.util.Optional;
 
 @Service
 public class JobService {
 
     private JobRepository jobRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final String AI_SERVICE_URL = "http://localhost:5000/extract-skills";
+    private final KafkaProducerService kafkaProducerService;
 
-    public JobService(JobRepository jobRepository) {
+    public JobService(JobRepository jobRepository, KafkaProducerService kafkaProducerService) {
         this.jobRepository = jobRepository;
+        this.kafkaProducerService = kafkaProducerService;
     }
 
     @SuppressWarnings("unchecked")
     public Job save(Job job) {
-        try {
-            Map<String, String> request = new HashMap<>();
-            request.put("description", job.getDescription());
-
-            Map<String, List<String>> response = restTemplate.postForObject(
-                    AI_SERVICE_URL,
-                    request,
-                    Map.class
-            );
-
-            if(response != null && response.containsKey("skills")) {
-                job.setSkills(response.get("skills"));
-            }
-        } catch (Exception e) {
-            System.err.println("Warning: AI Service is down. Saving job without skills");
-            e.printStackTrace();
-        }
-
-        return jobRepository.save(job);
+        Job savedJob = jobRepository.save(job);
+        String message = savedJob.getId() + ":" + savedJob.getDescription();
+        kafkaProducerService.sendJobEvent(message);
+        return savedJob;
     }
 
     public List<Job> findAll() {
@@ -47,5 +30,13 @@ public class JobService {
 
     public void delete(Long id) {
         jobRepository.deleteById(id);
+    }
+
+    public void updateJobSkills(Long jobId, List<String> skills) {
+        jobRepository.findById(jobId).ifPresent(job-> {
+            job.setSkills(skills);
+            jobRepository.save(job);
+            System.out.println("Updated Job " + jobId + " with skills: " + skills);
+        });
     }
 }
