@@ -10,10 +10,12 @@ public class JobService {
 
     private JobRepository jobRepository;
     private final KafkaProducerService kafkaProducerService;
+    private final NotificationService notificationService;
 
-    public JobService(JobRepository jobRepository, KafkaProducerService kafkaProducerService) {
+    public JobService(JobRepository jobRepository, KafkaProducerService kafkaProducerService, NotificationService notificationService) {
         this.jobRepository = jobRepository;
         this.kafkaProducerService = kafkaProducerService;
+        this.notificationService = notificationService;
     }
 
     @SuppressWarnings("unchecked")
@@ -35,7 +37,8 @@ public class JobService {
     public void updateJobSkills(Long jobId, List<String> skills) {
         jobRepository.findById(jobId).ifPresent(job-> {
             job.setSkills(skills);
-            jobRepository.save(job);
+            Job savedJob = jobRepository.save(job);
+            notificationService.notifyJobUpdated(savedJob);
             System.out.println("Updated Job " + jobId + " with skills: " + skills);
         });
     }

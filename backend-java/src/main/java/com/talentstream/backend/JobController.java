@@ -1,9 +1,13 @@
 package com.talentstream.backend;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.awt.*;
 import java.util.List;
 
 @RestController
@@ -13,6 +17,9 @@ public class JobController {
     @Autowired
     private JobService jobsService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     @PostMapping
     public Job createJob(@RequestBody Job job) {
         return jobsService.save(job);
@@ -21,6 +28,11 @@ public class JobController {
     @GetMapping
     public List<Job> getJobs() {
         return jobsService.findAll();
+    }
+
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamJobs() {
+        return notificationService.subscribe();
     }
 
     @DeleteMapping("/{id}")

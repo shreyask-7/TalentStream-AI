@@ -16,7 +16,23 @@ function App() {
   };
 
   useEffect(() => {
-    fetchJobs();
+    fetch("http://localhost:8000/api/jobs")
+      .then((response) => response.json())
+      .then((data) => setJobs(data));
+
+    const eventSource = new EventSource(
+      "http://localhost:8000/api/jobs/stream",
+    );
+
+    eventSource.addEventListener("job-updated", (event) => {
+      const updatedJob = JSON.parse(event.data);
+      console.log("Real-time update received!", updatedJob);
+      setJobs((prevJobs) =>
+        prevJobs.map((job) => (job.id === updatedJob.id ? updatedJob : job)),
+      );
+    });
+
+    return () => eventSource.close();
   }, []);
 
   const handleChange = (e) => {
