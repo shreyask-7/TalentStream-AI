@@ -10,7 +10,7 @@ docker-compose up -d
 echo.
 echo 🐍 2/5: Starting Python AI Service...
 :: Opens a new terminal, goes to the folder, and starts Uvicorn
-start "AI Service" cmd /k "cd ai-service && uvicorn main:app --reload --port 5000"
+start "AI Service" cmd /k "cd ai-service && venv\Scripts\activate && uvicorn main:app --reload --port 5000"
 
 echo.
 echo ☕ 3/5: Starting Java Backend...
