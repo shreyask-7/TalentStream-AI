@@ -26,8 +26,17 @@ async def consume_kafka():
         group_id="ai-consumer-group",
         auto_offset_reset="earliest"
     )
-    await consumer.start()
-    print("🎧 Python AI is now listening to Kafka...")
+    
+    connected = False
+    while not connected:
+        try:
+            await consumer.start()
+            connected = True
+            print("🎧 Python AI is now listening to Kafka...")
+        except Exception as e:
+            print(f"⏳ Kafka not ready yet. Retrying in 5 seconds... (Error: {e})")
+            await asyncio.sleep(5)
+
     try:
         async for msg in consumer:
             raw_message = msg.value.decode('utf-8')
