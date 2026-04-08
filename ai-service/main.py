@@ -1,77 +1,97 @@
-import spacy
+import json
+import os
 import asyncio
+import requests
 from fastapi import FastAPI
-from pydantic import BaseModel
 from aiokafka import AIOKafkaConsumer
-import httpx
+from sentence_transformers import SentenceTransformer, util
+from dotenv import load_dotenv
 
-nlp = spacy.load("en_core_web_md")
-ruler = nlp.add_pipe("entity_ruler", before="ner")
-tech_patterns = [
-    {"label": "TECH_SKILL", "pattern": "Databricks"},
-    {"label": "TECH_SKILL", "pattern": "AWS"},
-    {"label": "TECH_SKILL", "pattern": [{"LOWER": "llms"}]},
-    {"label": "TECH_SKILL", "pattern": [{"LOWER": "llm"}]},
-    {"label": "TECH_SKILL", "pattern": "Java"},
-    {"label": "TECH_SKILL", "pattern": "Spring Boot"}
-]
-ruler.add_patterns(tech_patterns)
+load_dotenv()
 
 app = FastAPI()
 
-async def consume_kafka():
-    consumer = AIOKafkaConsumer(
-        'job-events', 
-        bootstrap_servers='localhost:9092',
-        group_id="ai-consumer-group",
-        auto_offset_reset="earliest"
-    )
-    
-    connected = False
-    while not connected:
-        try:
-            await consumer.start()
-            connected = True
-            print("🎧 Python AI is now listening to Kafka...")
-        except Exception as e:
-            print(f"⏳ Kafka not ready yet. Retrying in 5 seconds... (Error: {e})")
-            await asyncio.sleep(5)
+print("Loading AI Model (This might take a few seconds)...")
+model = SentenceTransformer('all-MiniLM-L6-v2')
+print("✅ AI Model Loaded Successfully!")
 
+KNOWN_SKILLS = [
+    "Python", "Java", "React", "Spring Boot", "Docker", "Kubernetes",
+    "Kafka", "Machine Learning", "Data Analysis", "SQL", "PostgreSQL",
+    "AWS", "Microservices", "REST APIs", "Node.js", "C++", "Frontend Development",
+    "Backend Development", "System Design", "Vector Databases", "Pandas"
+]
+
+print("Generating Vector Embeddings for Knownledge Base...")
+skills_embeddings = model.encode(KNOWN_SKILLS, convert_to_tensor=True)
+print("✅ Knowledge Base Initialized!")
+
+KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
+KAFKA_TOPIC = "job-created"
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
+
+async def consume_kafka_messages():
+    consumer = AIOKafkaConsumer(
+        KAFKA_TOPIC,
+        bootstrap_servers=KAFKA_BROKER,
+        group_id='ai_vector_group-v2',
+        auto_offset_reset='earliest'
+    )
+    await consumer.start()
+    print(f"🚀 Kafka Consumer Connected to topic: {KAFKA_TOPIC}")
     try:
         async for msg in consumer:
-            raw_message = msg.value.decode('utf-8')
-            print(f"📥 Received from Kafka: {raw_message}")
+            raw_value = msg.value.decode('utf-8')
 
-            job_id, description = raw_message.split(":", 1)
-            job_id = job_id.strip()
+            try:
+                job_data = json.loads(raw_value)
+                job_id = job_data.get("id")
 
-            doc = nlp(description)
-            skills = list(set(ent.text for ent in doc.ents if ent.label_ in ["ORG", "PRODUCT", "TECH_SKILL"]))
-
-            async with httpx.AsyncClient() as client:
-                java_url = f"http://localhost:8080/api/jobs/{job_id}/skills"
-                response = await client.put(java_url, json=skills)
-                if response.status_code == 200:
-                    print(f"✅ Sent skills back to Java for Job {job_id}")
-                else:
-                    print(f"❌ FAILED to update Java. Status Code: {response.status_code}")
-                    print(f"Java Error Details: {response.text}")
+                if job_id:
+                    print(f"\n📥 Received Job {job_id}. Analyzing Context...")
+                    process_job_with_ai(job_data)
+            except json.JSONDecodeError:
+                print(f"⚠️ SKIPPING POISON PILL (Not JSON): {raw_value}")
+    except Exception as e:
+        print(f"🚨 FATAL ERROR in Kafka loop: {e}")
     finally:
         await consumer.stop()
 
+def process_job_with_ai(job_data):
+    job_id = job_data.get("id")
+    description = job_data.get("description", "")
+
+    if not description:
+        print(f"⚠️  No description found for Job {job_id}. Skipping...")
+        return
+    
+    jb_embedding = model.encode(description, convert_to_tensor=True)
+    cosine_scores = util.cos_sim(jb_embedding, skills_embeddings)[0]
+
+    extracted_skills = []
+    for i, score in enumerate(cosine_scores):
+        if score > 0.25: 
+            extracted_skills.append(KNOWN_SKILLS[i])
+    
+    print(f"🧠 AI Semantic Analysis Complete. Extracted Skills for Job {job_id}: {extracted_skills}")
+    send_skills_to_backend(job_id, extracted_skills)
+
+def send_skills_to_backend(job_id, skills):
+    url = f"{BACKEND_URL}/api/jobs/{job_id}/skills"
+    payload = {"skills": skills}
+    try:
+        response = requests.put(url, json=payload)
+        if response.status_code in [200, 201]:
+            print(f"✅ Successfully injected skills into Java Backend for Job {job_id}!")
+        else:
+            print(f"❌ Java Backend rejected payload. Status: {response.status_code}")
+    except Exception as e:
+        print(f"❌ Network Error: Could not reach Java Backend: {e}")
+
 @app.on_event("startup")
 async def startup_event():
-    asyncio.create_task(consume_kafka())
+    asyncio.create_task(consume_kafka_messages())
 
-class JobDescription(BaseModel):
-    description: str
-
-@app.post("/extract-skills")
-async def extract_skills(job: JobDescription):
-    doc = nlp(job.description)
-    extracted_terms = []
-
-    for ent in doc.ents:
-        if ent.label_ in ["ORG", "PRODUCT", "TECH_SKILL"]:
-            extracted_terms.append(ent.text)
-    return {"skills": list(set(extracted_terms))}
+@app.get("/health")
+def health_check():
+    return {"status": "AI Vector Engine is Operational!"}

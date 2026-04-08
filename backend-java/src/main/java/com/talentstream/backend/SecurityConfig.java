@@ -26,6 +26,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/jobs").permitAll()
                         .requestMatchers("/api/stream").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/jobs/*/skills").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/jobs/*/skills").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/jobs").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/jobs/**").authenticated()

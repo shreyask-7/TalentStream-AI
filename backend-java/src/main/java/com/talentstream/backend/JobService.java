@@ -2,7 +2,9 @@ package com.talentstream.backend;
 
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -21,8 +23,12 @@ public class JobService {
     @SuppressWarnings("unchecked")
     public Job save(Job job) {
         Job savedJob = jobRepository.save(job);
-        String message = savedJob.getId() + ":" + savedJob.getDescription();
-        kafkaProducerService.sendJobEvent(message);
+
+        Map<String, Object> jobEvent = new HashMap<>();
+        jobEvent.put("id", savedJob.getId());
+        jobEvent.put("description", savedJob.getDescription());
+
+        kafkaProducerService.sendJobEvent(jobEvent);
         return savedJob;
     }
 

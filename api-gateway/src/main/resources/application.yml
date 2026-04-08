@@ -4,3 +4,24 @@ server:
 eureka:
   client:
     enabled: false
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: auth-service
+              uri: http://localhost:8080
+              predicates:
+                - Path=/api/auth/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+                    key-resolver: "#{@ipKeyResolver}"
+            - id: job-service
+              uri: http://localhost:8080
+              predicates:
+                - Path=/api/jobs/**
