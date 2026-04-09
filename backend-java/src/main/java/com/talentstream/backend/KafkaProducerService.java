@@ -23,7 +23,7 @@ public class KafkaProducerService {
         try {
             String jsonMessage = objectMapper.writeValueAsString(message);
 
-            kafkaTemplate.send("job-created", jsonMessage);
+            kafkaTemplate.send(topicName, jsonMessage);
 
             System.out.println("Sent JSON event to Kafka: " + jsonMessage);
         } catch (Exception e) {
