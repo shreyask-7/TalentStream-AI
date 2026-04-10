@@ -30,4 +30,14 @@ public class KafkaProducerService {
             System.err.println("❌ Failed to serialize Kafka message: " + e.getMessage());
         }
     }
+
+    public void sendResumeEvent(ResumeUploadedEvent event) {
+        try {
+            String jsonMessage = objectMapper.writeValueAsString(event);
+            kafkaTemplate.send("resume-uploaded", jsonMessage);
+            System.out.println("📤 Sent Resume Event to Kafka: " + jsonMessage);
+        } catch (Exception e) {
+            System.err.println("❌ Failed to serialize Resume Event: " + e.getMessage());
+        }
+    }
 }

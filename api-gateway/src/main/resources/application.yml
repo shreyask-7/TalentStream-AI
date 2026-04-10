@@ -25,3 +25,7 @@ spring:
               uri: http://localhost:8080
               predicates:
                 - Path=/api/jobs/**
+            - id: backend-java-applications
+              uri: http://localhost:8080
+              predicates:
+                - Path=/api/applications/**
