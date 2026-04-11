@@ -5,7 +5,10 @@
 *.log
 
 #IntelliJ Idea
-.idea
+**/.idea/
+
+#Resume Folder
+**/uploads/
 
 # BlueJ files
 *.ctxt
