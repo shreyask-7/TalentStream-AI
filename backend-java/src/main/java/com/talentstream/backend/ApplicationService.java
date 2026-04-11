@@ -61,4 +61,11 @@ public class ApplicationService {
         kafkaProducerService.sendResumeEvent(event);
         return application;
     }
+
+    public Application updateApplicationScore(Long id, Double aiMatchScore) {
+        Application application = applicationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Application not found"));
+        application.setAiMatchScore(aiMatchScore);
+        return applicationRepository.save(application);
+    }
 }

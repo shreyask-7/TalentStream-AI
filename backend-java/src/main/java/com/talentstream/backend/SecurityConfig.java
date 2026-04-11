@@ -23,15 +23,26 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // 1. Auth and Public Streams
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/jobs").permitAll()
                         .requestMatchers("/api/stream").permitAll()
+
+                        // 2. Job Endpoints (Reading is public)
+                        .requestMatchers(HttpMethod.GET, "/api/jobs").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/jobs/**").permitAll()
+
+                        // 3. Application Endpoints (Applying and AI Scoring is public)
+                        .requestMatchers(HttpMethod.POST, "/api/applications").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/applications/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/applications/*/score").permitAll()
+
+                        // 4. Secured Job Modifications (Recruiters only)
                         .requestMatchers(HttpMethod.POST, "/api/jobs/*/skills").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/jobs/*/skills").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/jobs").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/jobs/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/applications/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/appications").permitAll()
+
+                        // 5. Catch-all
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

@@ -9,7 +9,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.http.ResponseEntity;
 import java.util.Map;
 
-import java.awt.*;
 import java.util.List;
 
 @RestController
@@ -21,6 +20,8 @@ public class JobController {
 
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private JobRepository jobRepository;
 
     @PostMapping
     public Job createJob(@RequestBody Job job) {
@@ -35,6 +36,17 @@ public class JobController {
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamJobs() {
         return notificationService.subscribe();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getJobbyId(@PathVariable Long id) {
+        try {
+            Job job = jobRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Job not found with id " + id));
+            return ResponseEntity.ok(job);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
