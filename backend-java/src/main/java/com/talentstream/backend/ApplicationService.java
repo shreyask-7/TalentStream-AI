@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -67,5 +68,9 @@ public class ApplicationService {
                 .orElseThrow(() -> new RuntimeException("Application not found"));
         application.setAiMatchScore(aiMatchScore);
         return applicationRepository.save(application);
+    }
+
+    public List<Application> findAllApplications() {
+        return applicationRepository.findAll();
     }
 }

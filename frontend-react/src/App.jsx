@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import JobCard from "./components/JobCard.jsx";
+import CandidatePortal from "./components/CandidatePortal.jsx";
+import RecruiterDashboard from "./components/RecruiterDashboard.jsx";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("jwt_token") || "");
@@ -11,6 +13,7 @@ function App() {
 
   const [jobs, setJobs] = useState([]);
   const [form, setForm] = useState({ title: "", company: "", description: "" });
+  const [activeView, setActiveView] = useState("candidate"); // 'candidate' or 'recruiter'
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -45,7 +48,7 @@ function App() {
   useEffect(() => {
     if (!token) return;
 
-    fetch();
+    fetchJobs();
 
     const eventSource = new EventSource(
       "http://localhost:8000/api/jobs/stream",
@@ -134,78 +137,202 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
-            TalentStream AI Dashboard
-          </h1>
-          <button
-            onClick={handleLogout}
-            className="bg-red-600 hover:bg-red-500 px-4 py-2 rounded font-semibold transition"
-          >
-            Log Out
-          </button>
-        </div>
+    <div
+      style={{
+        padding: "20px",
+        color: "#fff",
+        backgroundColor: "#0f172a",
+        minHeight: "100vh",
+      }}
+    >
+      {/* 1. THE NAVIGATION BAR */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "30px",
+          borderBottom: "1px solid #334155",
+          paddingBottom: "20px",
+        }}
+      >
+        <h1 style={{ color: "#a855f7", margin: 0 }}>
+          TalentStream AI Dashboard
+        </h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Post Job Form */}
-          <div className="lg:col-span-1">
-            <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 sticky top-8">
-              <h2 className="text-2xl font-bold mb-6 text-blue-400">
-                Post a Job
-              </h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <input
-                  name="title"
-                  value={form.title}
-                  onChange={handleChange}
-                  placeholder="Job Title"
-                  className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 outline-none"
-                  required
-                />
-                <input
-                  name="company"
-                  value={form.company}
-                  onChange={handleChange}
-                  placeholder="Company"
-                  className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 outline-none"
-                  required
-                />
-                <textarea
-                  name="description"
-                  value={form.description}
-                  onChange={handleChange}
-                  placeholder="Tricky Job Description without buzzwords..."
-                  className="w-full p-2 bg-gray-700 rounded border border-gray-600 h-32 focus:border-blue-500 outline-none"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-500 py-2 rounded-lg font-bold transition"
-                >
-                  Post Job 🚀
-                </button>
-              </form>
-            </div>
+        {token && (
+          <div style={{ display: "flex", gap: "15px" }}>
+            <button
+              onClick={() => setActiveView("candidate")}
+              style={{
+                padding: "10px 20px",
+                backgroundColor:
+                  activeView === "candidate" ? "#3b82f6" : "#334155",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+            >
+              Candidate Portal
+            </button>
+            <button
+              onClick={() => setActiveView("recruiter")}
+              style={{
+                padding: "10px 20px",
+                backgroundColor:
+                  activeView === "recruiter" ? "#3b82f6" : "#334155",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+            >
+              Recruiter View
+            </button>
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#ef4444",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+            >
+              Log Out
+            </button>
           </div>
-
-          {/* Right Column: Job Feed */}
-          <div className="lg:col-span-2">
-            <h2 className="text-2xl font-bold mb-6 text-gray-300">
-              Live Job Feed
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {jobs.map((job) => (
-                <JobCard key={job.id} job={job} onDelete={handleDelete} />
-              ))}
-            </div>
-            {jobs.length === 0 && (
-              <p className="text-gray-500 italic">No jobs posted yet...</p>
-            )}
-          </div>
-        </div>
+        )}
       </div>
+
+      {/* 2. CONDITIONAL RENDERING (The Magic) */}
+      {!token ? (
+        // SHOW LOGIN IF NOT AUTHENTICATED
+        <form
+          onSubmit={handleLogin}
+          style={{
+            maxWidth: "400px",
+            margin: "100px auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: "15px",
+          }}
+        >
+          <h2 style={{ textAlign: "center" }}>Login to TalentStream</h2>
+          <input
+            type="text"
+            name="username"
+            value={authForm.username}
+            onChange={handleAuthChange}
+            style={{ padding: "10px" }}
+          />
+          <input
+            type="password"
+            name="password"
+            value={authForm.password}
+            onChange={handleAuthChange}
+            style={{ padding: "10px" }}
+          />
+          <button
+            type="submit"
+            style={{
+              padding: "10px",
+              backgroundColor: "#3b82f6",
+              color: "white",
+              border: "none",
+            }}
+          >
+            Login
+          </button>
+        </form>
+      ) : activeView === "candidate" ? (
+        // SHOW CANDIDATE STUFF (Portal + Job List)
+        <div
+          style={{
+            display: "flex",
+            gap: "40px",
+            justifyContent: "center",
+            alignItems: "flex-start",
+          }}
+        >
+          <div style={{ flex: 1, maxWidth: "500px" }}>
+            <CandidatePortal />
+          </div>
+          <div style={{ flex: 1, maxWidth: "600px" }}>
+            <h2>Available Positions</h2>
+            {jobs.map((job) => (
+              <JobCard key={job.id} job={job} onDelete={handleDelete} />
+            ))}
+          </div>
+        </div>
+      ) : (
+        // SHOW RECRUITER STUFF (Dashboard + Job Posting)
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "40px",
+            alignItems: "center",
+          }}
+        >
+          <div style={{ width: "100%", maxWidth: "900px" }}>
+            <RecruiterDashboard />
+          </div>
+
+          {/* Your Post Job Form Container */}
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "500px",
+              backgroundColor: "#1e293b",
+              padding: "20px",
+              borderRadius: "8px",
+            }}
+          >
+            <h2>Post a New Job</h2>
+            <form
+              onSubmit={handleSubmit}
+              style={{ display: "flex", flexDirection: "column", gap: "15px" }}
+            >
+              <input
+                name="title"
+                placeholder="Job Title"
+                value={form.title}
+                onChange={handleChange}
+                style={{ padding: "10px" }}
+              />
+              <input
+                name="company"
+                placeholder="Company"
+                value={form.company}
+                onChange={handleChange}
+                style={{ padding: "10px" }}
+              />
+              <textarea
+                name="description"
+                placeholder="Job Description"
+                value={form.description}
+                onChange={handleChange}
+                style={{ padding: "10px", minHeight: "100px" }}
+              />
+              <button
+                type="submit"
+                style={{
+                  padding: "10px",
+                  backgroundColor: "#3b82f6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "5px",
+                }}
+              >
+                Post Job 🚀
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

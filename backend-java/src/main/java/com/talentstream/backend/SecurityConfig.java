@@ -35,6 +35,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/applications").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/applications/**").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/applications/*/score").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/applications").permitAll()
 
                         // 4. Secured Job Modifications (Recruiters only)
                         .requestMatchers(HttpMethod.POST, "/api/jobs/*/skills").permitAll()

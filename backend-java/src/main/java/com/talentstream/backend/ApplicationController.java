@@ -40,4 +40,13 @@ public class ApplicationController {
             return  ResponseEntity.badRequest().body("Failed to update score: " + e.getMessage());
         }
     }
+
+    @GetMapping
+    public ResponseEntity<?> getAllApplications() {
+        try {
+            return ResponseEntity.ok(applicationService.findAllApplications());
+        } catch (Exception e) {
+            return  ResponseEntity.badRequest().body("Error fetching applications: " + e.getMessage());
+        }
+    }
 }
