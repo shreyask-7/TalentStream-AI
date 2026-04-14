@@ -20,6 +20,14 @@ public class Job {
 
     private String company;
 
+    @Column(nullable = true)
+    private String postedBy;
+
+    public String getPostedBy() {
+        return postedBy;
+    }
+    public void setPostedBy(String postedBy) { this.postedBy = postedBy; }
+
     @ElementCollection
     @CollectionTable(name = "job_skills", joinColumns = @JoinColumn(name = "job_id"))
     @Column(name = "skills")

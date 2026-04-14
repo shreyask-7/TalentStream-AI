@@ -3,17 +3,21 @@ import axios from "axios";
 import JobCard from "./components/JobCard.jsx";
 import CandidatePortal from "./components/CandidatePortal.jsx";
 import RecruiterDashboard from "./components/RecruiterDashboard.jsx";
+import { jwtDecode } from "jwt-decode";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("jwt_token") || "");
   const [authForm, setAuthForm] = useState({
     username: "user",
     password: "password",
+    role: "ROLE_CANDIDATE",
   });
+  const [isLoginMode, setIsLoginMode] = useState(true);
 
   const [jobs, setJobs] = useState([]);
   const [form, setForm] = useState({ title: "", company: "", description: "" });
   const [activeView, setActiveView] = useState("candidate"); // 'candidate' or 'recruiter'
+  const [userRole, setUserRole] = useState(null);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -25,8 +29,34 @@ function App() {
       const jwt = response.data.token || response.data;
       setToken(jwt);
       localStorage.setItem("jwt_token", jwt);
+
+      const decoded = jwtDecode(jwt);
+      setUserRole(decoded.role);
+
+      if (decoded.role === "ROLE_RECRUITER") {
+        setActiveView("recruiter");
+      } else {
+        setActiveView("candidate");
+      }
     } catch (error) {
       alert("Login failed! Check your credentials or backend status.");
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post(
+        "http://localhost:8000/api/auth/register",
+        authForm,
+      );
+      alert(response.data);
+      if (response.data === "User registered successfully!") {
+        setIsLoginMode(true);
+      }
+    } catch (error) {
+      alert("Registration failed! Check console or ensure backend is running.");
+      console.error(error);
     }
   };
 
@@ -99,43 +129,6 @@ function App() {
     }
   };
 
-  if (!token) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="bg-gray-800 p-8 rounded-xl shadow-lg w-96 border border-gray-700">
-          <h2 className="text-2xl font-bold text-blue-400 mb-6 text-center">
-            TalentStream Login
-          </h2>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <input
-              name="username"
-              value={authForm.username}
-              onChange={handleAuthChange}
-              placeholder="Username"
-              className="w-full p-2 bg-gray-700 rounded text-white border border-gray-600 focus:border-blue-500 outline-none"
-              required
-            />
-            <input
-              name="password"
-              type="password"
-              value={authForm.password}
-              onChange={handleAuthChange}
-              placeholder="Password"
-              className="w-full p-2 bg-gray-700 rounded text-white border border-gray-600 focus:border-blue-500 outline-none"
-              required
-            />
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-500 py-2 rounded-lg font-bold text-white transition"
-            >
-              Log In
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       style={{
@@ -162,34 +155,36 @@ function App() {
 
         {token && (
           <div style={{ display: "flex", gap: "15px" }}>
-            <button
-              onClick={() => setActiveView("candidate")}
-              style={{
-                padding: "10px 20px",
-                backgroundColor:
-                  activeView === "candidate" ? "#3b82f6" : "#334155",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-                cursor: "pointer",
-              }}
-            >
-              Candidate Portal
-            </button>
-            <button
-              onClick={() => setActiveView("recruiter")}
-              style={{
-                padding: "10px 20px",
-                backgroundColor:
-                  activeView === "recruiter" ? "#3b82f6" : "#334155",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-                cursor: "pointer",
-              }}
-            >
-              Recruiter View
-            </button>
+            {userRole === "ROLE_CANDIDATE" && (
+              <button
+                onClick={() => setActiveView("candidate")}
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "#3b82f6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "5px",
+                }}
+              >
+                Candidate Portal
+              </button>
+            )}
+
+            {userRole === "ROLE_RECRUITER" && (
+              <button
+                onClick={() => setActiveView("recruiter")}
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "#3b82f6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "5px",
+                }}
+              >
+                Recruiter View
+              </button>
+            )}
+
             <button
               onClick={handleLogout}
               style={{
@@ -209,9 +204,8 @@ function App() {
 
       {/* 2. CONDITIONAL RENDERING (The Magic) */}
       {!token ? (
-        // SHOW LOGIN IF NOT AUTHENTICATED
-        <form
-          onSubmit={handleLogin}
+        // SHOW AUTH FORM IF NOT AUTHENTICATED
+        <div
           style={{
             maxWidth: "400px",
             margin: "100px auto",
@@ -220,33 +214,83 @@ function App() {
             gap: "15px",
           }}
         >
-          <h2 style={{ textAlign: "center" }}>Login to TalentStream</h2>
-          <input
-            type="text"
-            name="username"
-            value={authForm.username}
-            onChange={handleAuthChange}
-            style={{ padding: "10px" }}
-          />
-          <input
-            type="password"
-            name="password"
-            value={authForm.password}
-            onChange={handleAuthChange}
-            style={{ padding: "10px" }}
-          />
+          <h2 style={{ textAlign: "center" }}>
+            {isLoginMode ? "Login to TalentStream" : "Register New Account"}
+          </h2>
+
+          <form
+            onSubmit={isLoginMode ? handleLogin : handleRegister}
+            style={{ display: "flex", flexDirection: "column", gap: "15px" }}
+          >
+            <input
+              type="text"
+              name="username"
+              value={authForm.username}
+              onChange={handleAuthChange}
+              placeholder="Username"
+              style={{ padding: "10px" }}
+              required
+            />
+            <input
+              type="password"
+              name="password"
+              value={authForm.password}
+              onChange={handleAuthChange}
+              placeholder="Password"
+              style={{ padding: "10px" }}
+              required
+            />
+
+            {!isLoginMode && (
+              <select
+                name="role"
+                value={authForm.role}
+                onChange={handleAuthChange}
+                style={{
+                  padding: "10px",
+                  backgroundColor: "#334155",
+                  color: "white",
+                  borderRadius: "4px",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="ROLE_CANDIDATE">I am a Candidate</option>
+                <option value="ROLE_RECRUITER">I am a Recruiter</option>
+              </select>
+            )}
+
+            <button
+              type="submit"
+              style={{
+                padding: "10px",
+                backgroundColor: "#3b82f6",
+                color: "white",
+                border: "none",
+                cursor: "pointer",
+                borderRadius: "4px",
+              }}
+            >
+              {isLoginMode ? "Login" : "Register"}
+            </button>
+          </form>
+
+          {/* The Toggle Switch */}
           <button
-            type="submit"
+            onClick={() => setIsLoginMode(!isLoginMode)}
             style={{
-              padding: "10px",
-              backgroundColor: "#3b82f6",
-              color: "white",
+              background: "none",
               border: "none",
+              color: "#a855f7",
+              cursor: "pointer",
+              textDecoration: "underline",
             }}
           >
-            Login
+            {isLoginMode
+              ? "Need an account? Register here."
+              : "Already have an account? Login here."}
           </button>
-        </form>
+        </div>
       ) : activeView === "candidate" ? (
         // SHOW CANDIDATE STUFF (Portal + Job List)
         <div
@@ -278,7 +322,7 @@ function App() {
           }}
         >
           <div style={{ width: "100%", maxWidth: "900px" }}>
-            <RecruiterDashboard />
+            <RecruiterDashboard token={token} />
           </div>
 
           {/* Your Post Job Form Container */}

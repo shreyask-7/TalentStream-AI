@@ -1,18 +1,25 @@
 import React, { useState, useEffect, use } from "react";
 import axios from "axios";
 
-const RecruiterDashboard = () => {
+const RecruiterDashboard = ({ token }) => {
   const [applications, setApplications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchApplications();
-  }, []);
+    if (token) {
+      fetchApplications();
+    }
+  }, [token]);
 
   const fetchApplications = async () => {
     try {
       const response = await axios.get(
         "http://localhost:8000/api/applications",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
       );
 
       const sortedApps = response.data.sort(

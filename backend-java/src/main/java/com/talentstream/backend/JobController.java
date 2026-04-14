@@ -2,13 +2,14 @@ package com.talentstream.backend;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.http.ResponseEntity;
 import java.util.Map;
-
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -23,9 +24,12 @@ public class JobController {
     @Autowired
     private JobRepository jobRepository;
 
+    @PreAuthorize("hasRole('RECRUITER')")
     @PostMapping
-    public Job createJob(@RequestBody Job job) {
-        return jobsService.save(job);
+    public ResponseEntity<Job> createJob(@RequestBody Job job,  Principal principal) {
+        String currentRecruiter = principal.getName();
+        job.setPostedBy(currentRecruiter);
+        return ResponseEntity.ok(jobsService.save(job));
     }
 
     @GetMapping
