@@ -1,4 +1,4 @@
-const JobCard = ({ job, onDelete }) => {
+const JobCard = ({ job, onDelete, onApply }) => {
   return (
     <div className="bg-slate-800 border border-slate-700/50 p-6 rounded-2xl shadow-lg hover:shadow-blue-500/10 hover:border-blue-500/50 transition-all duration-300 group">
       <div className="flex justify-between items-start mb-2">
@@ -12,12 +12,10 @@ const JobCard = ({ job, onDelete }) => {
 
       <p className="text-blue-400 font-medium mb-4">{job.company}</p>
 
-      {/* line-clamp-3 ensures long descriptions don't break the card size */}
       <p className="text-slate-400 text-sm line-clamp-3 leading-relaxed">
         {job.description}
       </p>
 
-      {/* Skills Pill Badges */}
       {job.skills && job.skills.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-5">
           {job.skills.map((skill, index) => (
@@ -33,17 +31,23 @@ const JobCard = ({ job, onDelete }) => {
 
       {/* Footer / Actions */}
       <div className="mt-6 pt-4 border-t border-slate-700/50 flex justify-between items-center">
-        <button className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">
-          View Details →
-        </button>
+        {/* CANDIDATE ACTION */}
+        {onApply && (
+          <button
+            onClick={() => onApply(job)}
+            className="px-4 py-2 bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white font-semibold rounded-lg transition-colors border border-blue-600/30 hover:border-blue-600"
+          >
+            Apply Now 🚀
+          </button>
+        )}
 
-        {/* We only want to show delete if onDelete is passed (Recruiter view) */}
+        {/* RECRUITER ACTION */}
         {onDelete && (
           <button
             onClick={() => onDelete(job.id)}
-            className="text-sm text-red-400 hover:text-red-300 transition-colors cursor-pointer px-3 py-1 hover:bg-red-500/10 rounded-lg"
+            className="text-sm text-red-400 hover:text-red-300 transition-colors cursor-pointer px-3 py-1 hover:bg-red-500/10 rounded-lg ml-auto"
           >
-            Delete
+            Delete Job
           </button>
         )}
       </div>

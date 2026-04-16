@@ -10,16 +10,18 @@ import RecruiterDashboard from "./components/RecruiterDashboard.jsx";
 function App() {
   const [token, setToken] = useState(localStorage.getItem("jwt_token") || "");
   const [authForm, setAuthForm] = useState({
-    username: "user",
-    password: "password",
+    username: "",
+    password: "",
     role: "ROLE_CANDIDATE",
   });
   const [isLoginMode, setIsLoginMode] = useState(true);
-
   const [jobs, setJobs] = useState([]);
   const [form, setForm] = useState({ title: "", company: "", description: "" });
-  const [activeView, setActiveView] = useState("candidate"); // 'candidate' or 'recruiter'
+  const [activeView, setActiveView] = useState("candidate");
   const [userRole, setUserRole] = useState(null);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedJob, setSelectedJob] = useState(null);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -34,16 +36,13 @@ function App() {
 
       const decoded = jwtDecode(jwt);
       setUserRole(decoded.role);
+      setActiveView(
+        decoded.role === "ROLE_RECRUITER" ? "recruiter" : "candidate",
+      );
 
-      if (decoded.role === "ROLE_RECRUITER") {
-        setActiveView("recruiter");
-      } else {
-        setActiveView("candidate");
-      }
-
-      toast.success("Login successful!");
+      toast.success("Welcome back to TalentStream!");
     } catch (error) {
-      toast.error("Login failed! Check your credentials or backend status.");
+      toast.error("Login failed! Check your credentials.");
     }
   };
 
@@ -54,6 +53,7 @@ function App() {
         "http://localhost:8000/api/auth/register",
         authForm,
       );
+
       if (response.data === "User registered successfully!") {
         toast.success(response.data);
         setIsLoginMode(true);
@@ -61,9 +61,7 @@ function App() {
         toast.error(response.data);
       }
     } catch (error) {
-      toast.error(
-        "Registration failed! Check console or ensure backend is running.",
-      );
+      toast.error("Registration failed! Check console.");
       console.error(error);
     }
   };
@@ -72,7 +70,7 @@ function App() {
     setToken("");
     localStorage.removeItem("jwt_token");
     setJobs([]);
-    toast.success("Logged out successfully!");
+    toast.success("Logged out successfully");
   };
 
   const fetchJobs = async () => {
@@ -86,30 +84,23 @@ function App() {
 
   useEffect(() => {
     if (!token) return;
-
     fetchJobs();
-
     const eventSource = new EventSource(
       "http://localhost:8000/api/jobs/stream",
     );
-
     eventSource.addEventListener("job-updated", (event) => {
       const updatedJob = JSON.parse(event.data);
-      console.log("Real-time update received!", updatedJob);
       setJobs((prevJobs) =>
         prevJobs.map((job) => (job.id === updatedJob.id ? updatedJob : job)),
       );
     });
-
     return () => eventSource.close();
   }, [token]);
 
-  const handleChange = (e) => {
+  const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
-  };
-  const handleAuthChange = (e) => {
+  const handleAuthChange = (e) =>
     setAuthForm({ ...authForm, [e.target.name]: e.target.value });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -121,8 +112,7 @@ function App() {
       fetchJobs();
       toast.success("Job posted successfully! 🚀");
     } catch (error) {
-      console.error(error);
-      toast.error("Failed to post job! Check console.");
+      toast.error("Failed to post job.");
     }
   };
 
@@ -135,15 +125,13 @@ function App() {
         fetchJobs();
         toast.success("Job deleted.");
       } catch (error) {
-        console.error("Error deleting job:", error);
-        toast.error("Failed to delete job! Check console.");
+        toast.error("Error deleting job.");
       }
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-8 font-sans">
-      {/* Global Notification Component */}
       <Toaster
         position="top-right"
         toastOptions={{ style: { background: "#1e293b", color: "#fff" } }}
@@ -248,67 +236,106 @@ function App() {
           </div>
         </div>
       ) : activeView === "candidate" ? (
-        // CANDIDATE VIEW
-        <div className="flex flex-col lg:flex-row gap-8 justify-center items-start max-w-7xl mx-auto">
-          <div className="w-full lg:w-1/3">
-            <CandidatePortal />
-          </div>
-          <div className="w-full lg:w-2/3">
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <span className="w-2 h-6 bg-blue-500 rounded-full"></span>
-              Live Job Feed
-            </h2>
-            <div className="flex flex-col gap-4">
-              {jobs.map((job) => (
-                <JobCard key={job.id} job={job} onDelete={handleDelete} />
-              ))}
-            </div>
-          </div>
+        // 🚀 CANDIDATE VIEW
+        <div className="max-w-3xl mx-auto flex flex-col gap-6">
+          <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+            <span className="w-2 h-6 bg-blue-500 rounded-full"></span>
+            Live Job Feed
+          </h2>
+
+          {jobs.length === 0 ? (
+            <p className="text-slate-400 text-center py-10">
+              No jobs available right now. Check back later!
+            </p>
+          ) : (
+            jobs.map((job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                onApply={(clickedJob) => {
+                  setSelectedJob(clickedJob);
+                  setIsModalOpen(true);
+                }}
+              />
+            ))
+          )}
+
+          {/* Render the Modal Component */}
+          {isModalOpen && selectedJob && (
+            <CandidatePortal
+              job={selectedJob}
+              onClose={() => setIsModalOpen(false)}
+            />
+          )}
         </div>
       ) : (
-        // RECRUITER VIEW
+        // 🚀 RECRUITER VIEW
         <div className="flex flex-col gap-10 items-center max-w-7xl mx-auto">
+          {/* Top: The Analytics Dashboard */}
           <div className="w-full">
             <RecruiterDashboard token={token} />
           </div>
 
-          <div className="w-full max-w-lg bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-700/50">
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <span className="w-2 h-6 bg-purple-500 rounded-full"></span>
-              Post a New Role
-            </h2>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <input
-                name="title"
-                placeholder="Job Title (e.g. Senior Backend Engineer)"
-                value={form.title}
-                onChange={handleChange}
-                className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all placeholder-slate-400"
-                required
-              />
-              <input
-                name="company"
-                placeholder="Company Name"
-                value={form.company}
-                onChange={handleChange}
-                className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all placeholder-slate-400"
-                required
-              />
-              <textarea
-                name="description"
-                placeholder="Job Description (Paste the exact text here...)"
-                value={form.description}
-                onChange={handleChange}
-                className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all placeholder-slate-400 min-h-[150px] resize-y"
-                required
-              />
-              <button
-                type="submit"
-                className="w-full py-3 mt-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-lg shadow-lg shadow-purple-500/30 transition-all active:scale-[0.98]"
-              >
-                Publish Job Post 🚀
-              </button>
-            </form>
+          {/* Bottom: Split View for Posting and Managing Jobs */}
+          <div className="w-full flex flex-col lg:flex-row gap-8 items-start">
+            {/* Left Side: Post a Job Form */}
+            <div className="w-full lg:w-1/3 bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-700/50 sticky top-8">
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <span className="w-2 h-6 bg-purple-500 rounded-full"></span>
+                Post a New Role
+              </h2>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <input
+                  name="title"
+                  placeholder="Job Title"
+                  value={form.title}
+                  onChange={handleChange}
+                  className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-slate-200"
+                  required
+                />
+                <input
+                  name="company"
+                  placeholder="Company Name"
+                  value={form.company}
+                  onChange={handleChange}
+                  className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-slate-200"
+                  required
+                />
+                <textarea
+                  name="description"
+                  placeholder="Job Description..."
+                  value={form.description}
+                  onChange={handleChange}
+                  className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-slate-200 min-h-[150px]"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="w-full py-3 mt-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-lg shadow-lg transition-all active:scale-[0.98]"
+                >
+                  Publish Job Post 🚀
+                </button>
+              </form>
+            </div>
+
+            {/* Right Side: Manage Active Jobs */}
+            <div className="w-full lg:w-2/3">
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <span className="w-2 h-6 bg-blue-500 rounded-full"></span>
+                Manage Active Postings
+              </h2>
+              <div className="flex flex-col gap-4">
+                {jobs.length === 0 ? (
+                  <p className="text-slate-400">
+                    You haven't posted any jobs yet.
+                  </p>
+                ) : (
+                  jobs.map((job) => (
+                    <JobCard key={job.id} job={job} onDelete={handleDelete} />
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
