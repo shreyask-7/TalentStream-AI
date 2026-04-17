@@ -1,10 +1,17 @@
 package com.talentstream.backend;
 
+import org.springframework.core.io.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.stream.Collectors;
 import java.security.Principal;
 import java.util.ArrayList;
@@ -69,6 +76,42 @@ public class ApplicationController {
             return ResponseEntity.ok(myApplications);
         } catch (Exception e) {
             return  ResponseEntity.badRequest().body("Error fetching applications: " + e.getMessage());
+        }
+    }
+
+    @PreAuthorize("hasRole('RECRUITER')")
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        try {
+            Application app = applicationRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Application not found for ID: " + id));
+            app.setStatus(payload.get("status"));
+            applicationRepository.save(app);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to update status: " + e.getMessage());
+        }
+    }
+
+    @PreAuthorize("hasRole('RECRUITER')")
+    @GetMapping("/{id}/resume")
+    public ResponseEntity<Resource> viewResume(@PathVariable Long id) {
+        try {
+            Application application = applicationRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Application not found for ID: " + id));
+            Path filePath = Paths.get(application.getResumeFilePath()).normalize();
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if(!resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 }

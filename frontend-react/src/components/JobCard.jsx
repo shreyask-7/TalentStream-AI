@@ -1,4 +1,4 @@
-const JobCard = ({ job, onDelete, onApply }) => {
+const JobCard = ({ job, onDelete, onApply, onManage }) => {
   return (
     <div className="bg-slate-800 border border-slate-700/50 p-6 rounded-2xl shadow-lg hover:shadow-blue-500/10 hover:border-blue-500/50 transition-all duration-300 group">
       <div className="flex justify-between items-start mb-2">
@@ -41,7 +41,17 @@ const JobCard = ({ job, onDelete, onApply }) => {
           </button>
         )}
 
-        {/* RECRUITER ACTION */}
+        {/* RECRUITER MANAGE ACTION */}
+        {onManage && (
+          <button
+            onClick={() => onManage(job)}
+            className="text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
+          >
+            Manage Candidates →
+          </button>
+        )}
+
+        {/* RECRUITER DELETE ACTION */}
         {onDelete && (
           <button
             onClick={() => onDelete(job.id)}

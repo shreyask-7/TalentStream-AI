@@ -5,7 +5,7 @@ import toast, { Toaster } from "react-hot-toast";
 
 import JobCard from "./components/JobCard.jsx";
 import CandidatePortal from "./components/CandidatePortal.jsx";
-import RecruiterDashboard from "./components/RecruiterDashboard.jsx";
+import JobWorkspace from "./components/JobWorkspace.jsx";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("jwt_token") || "");
@@ -18,6 +18,7 @@ function App() {
   const [jobs, setJobs] = useState([]);
   const [form, setForm] = useState({ title: "", company: "", description: "" });
   const [activeView, setActiveView] = useState("candidate");
+  const [activeRecruiterJob, setActiveRecruiterJob] = useState(null);
   const [userRole, setUserRole] = useState(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -73,26 +74,54 @@ function App() {
     toast.success("Logged out successfully");
   };
 
-  const fetchJobs = async () => {
-    try {
-      const response = await axios.get("http://localhost:8000/api/jobs");
-      setJobs(response.data);
-    } catch (error) {
-      console.error("Error fetching jobs:", error);
-    }
-  };
-
   useEffect(() => {
     if (!token) return;
-    fetchJobs();
+
+    let currentRole = userRole;
+    if (!currentRole) {
+      try {
+        const decoded = jwtDecode(token);
+        currentRole = decoded.role;
+        setUserRole(currentRole);
+        setActiveView(
+          currentRole === "ROLE_RECRUITER" ? "recruiter" : "candidate",
+        );
+      } catch (error) {
+        handleLogout();
+        return;
+      }
+    }
+
+    const fetchInitialJobs = async () => {
+      try {
+        const endpoint =
+          currentRole === "ROLE_RECRUITER"
+            ? "http://localhost:8000/api/jobs/my-jobs"
+            : "http://localhost:8000/api/jobs";
+        const response = await axios.get(endpoint, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setJobs(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        console.error("Error fetching initial jobs:", error);
+        setJobs([]);
+      }
+    };
+
+    fetchInitialJobs();
+
     const eventSource = new EventSource(
       "http://localhost:8000/api/jobs/stream",
     );
     eventSource.addEventListener("job-updated", (event) => {
-      const updatedJob = JSON.parse(event.data);
-      setJobs((prevJobs) =>
-        prevJobs.map((job) => (job.id === updatedJob.id ? updatedJob : job)),
-      );
+      try {
+        const updatedJob = JSON.parse(event.data);
+        setJobs((prevJobs) =>
+          prevJobs.map((job) => (job.id === updatedJob.id ? updatedJob : job)),
+        );
+      } catch (error) {
+        console.error("SSE Parse Error:", error);
+      }
     });
     return () => eventSource.close();
   }, [token]);
@@ -109,7 +138,15 @@ function App() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setForm({ title: "", company: "", description: "" });
-      fetchJobs();
+
+      // Refresh the feed
+      const endpoint =
+        userRole === "ROLE_RECRUITER" ? "/api/jobs/my-jobs" : "/api/jobs";
+      const response = await axios.get(`http://localhost:8000${endpoint}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setJobs(Array.isArray(response.data) ? response.data : []);
+
       toast.success("Job posted successfully! 🚀");
     } catch (error) {
       toast.error("Failed to post job.");
@@ -122,7 +159,7 @@ function App() {
         await axios.delete(`http://localhost:8000/api/jobs/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        fetchJobs();
+        setJobs(jobs.filter((job) => job.id !== id)); // Optimistic UI update
         toast.success("Job deleted.");
       } catch (error) {
         toast.error("Error deleting job.");
@@ -269,74 +306,88 @@ function App() {
           )}
         </div>
       ) : (
-        // 🚀 RECRUITER VIEW
-        <div className="flex flex-col gap-10 items-center max-w-7xl mx-auto">
-          {/* Top: The Analytics Dashboard */}
-          <div className="w-full">
-            <RecruiterDashboard token={token} />
-          </div>
+        <div className="max-w-7xl mx-auto">
+          {activeRecruiterJob ? (
+            // DETAIL VIEW: The Job Workspace
+            <JobWorkspace
+              job={activeRecruiterJob}
+              token={token}
+              onBack={() => setActiveRecruiterJob(null)}
+            />
+          ) : (
+            // MASTER VIEW: The Dashboard & Job List
+            <div className="flex flex-col gap-10 items-center">
+              {/* Split View for Posting and Managing Jobs */}
+              <div className="w-full flex flex-col lg:flex-row gap-8 items-start">
+                {/* Left Side: Post a Job Form */}
+                <div className="w-full lg:w-1/3 bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-700/50 sticky top-8">
+                  <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                    <span className="w-2 h-6 bg-purple-500 rounded-full"></span>
+                    Post a New Role
+                  </h2>
+                  <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    <input
+                      name="title"
+                      placeholder="Job Title"
+                      value={form.title}
+                      onChange={handleChange}
+                      className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-slate-200"
+                      required
+                    />
+                    <input
+                      name="company"
+                      placeholder="Company Name"
+                      value={form.company}
+                      onChange={handleChange}
+                      className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-slate-200"
+                      required
+                    />
+                    <textarea
+                      name="description"
+                      placeholder="Job Description..."
+                      value={form.description}
+                      onChange={handleChange}
+                      className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-slate-200 min-h-[150px]"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      className="w-full py-3 mt-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-lg shadow-lg transition-all active:scale-[0.98]"
+                    >
+                      Publish Job Post 🚀
+                    </button>
+                  </form>
+                </div>
 
-          {/* Bottom: Split View for Posting and Managing Jobs */}
-          <div className="w-full flex flex-col lg:flex-row gap-8 items-start">
-            {/* Left Side: Post a Job Form */}
-            <div className="w-full lg:w-1/3 bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-700/50 sticky top-8">
-              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                <span className="w-2 h-6 bg-purple-500 rounded-full"></span>
-                Post a New Role
-              </h2>
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <input
-                  name="title"
-                  placeholder="Job Title"
-                  value={form.title}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-slate-200"
-                  required
-                />
-                <input
-                  name="company"
-                  placeholder="Company Name"
-                  value={form.company}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-slate-200"
-                  required
-                />
-                <textarea
-                  name="description"
-                  placeholder="Job Description..."
-                  value={form.description}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-slate-200 min-h-[150px]"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="w-full py-3 mt-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-lg shadow-lg transition-all active:scale-[0.98]"
-                >
-                  Publish Job Post 🚀
-                </button>
-              </form>
-            </div>
-
-            {/* Right Side: Manage Active Jobs */}
-            <div className="w-full lg:w-2/3">
-              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                <span className="w-2 h-6 bg-blue-500 rounded-full"></span>
-                Manage Active Postings
-              </h2>
-              <div className="flex flex-col gap-4">
-                {jobs.length === 0 ? (
-                  <p className="text-slate-400">
-                    You haven't posted any jobs yet.
-                  </p>
-                ) : (
-                  jobs.map((job) => (
-                    <JobCard key={job.id} job={job} onDelete={handleDelete} />
-                  ))
-                )}
+                {/* Right Side: Manage Active Jobs */}
+                <div className="w-full lg:w-2/3">
+                  <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                    <span className="w-2 h-6 bg-blue-500 rounded-full"></span>
+                    Manage Active Postings
+                  </h2>
+                  <div className="flex flex-col gap-4">
+                    {jobs.length === 0 ? (
+                      <p className="text-slate-400">
+                        You haven't posted any jobs yet.
+                      </p>
+                    ) : (
+                      jobs.map((job) => (
+                        <JobCard
+                          key={job.id}
+                          job={job}
+                          onDelete={handleDelete}
+                          // 👈 New Prop to trigger the workspace!
+                          onManage={(clickedJob) =>
+                            setActiveRecruiterJob(clickedJob)
+                          }
+                        />
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

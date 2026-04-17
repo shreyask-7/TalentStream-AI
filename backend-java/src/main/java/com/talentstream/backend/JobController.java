@@ -18,7 +18,8 @@ public class JobController {
 
     @Autowired
     private JobService jobsService;
-
+    @Autowired
+    private ApplicationRepository applicationRepository;
     @Autowired
     private NotificationService notificationService;
     @Autowired
@@ -37,6 +38,13 @@ public class JobController {
         return jobsService.findAll();
     }
 
+    @PreAuthorize("hasRole('RECRUITER')")
+    @GetMapping("/my-jobs")
+    public ResponseEntity<List<Job>> getMyJobs(Principal principal) {
+        List<Job> myJobs = jobRepository.findByPostedBy(principal.getName());
+        return ResponseEntity.ok(myJobs);
+    }
+
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamJobs() {
         return notificationService.subscribe();
@@ -51,6 +59,17 @@ public class JobController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
+    }
+    @PreAuthorize("hasRole('RECRUITER')")
+    @GetMapping("/{id}/applications")
+    public ResponseEntity<?> getApplicationsForJob(@PathVariable Long id, Principal principal) {
+        Job job = jobRepository.findById(id).orElse(null);
+        if(job == null || !job.getPostedBy().equals(principal.getName())) {
+            return ResponseEntity.status(403).body("Not authorized to view these candidates.");
+        }
+
+        List<Application> applications = applicationRepository.findByJobId(id);
+        return ResponseEntity.ok(applications);
     }
 
     @DeleteMapping("/{id}")

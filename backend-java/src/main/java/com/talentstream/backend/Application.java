@@ -23,6 +23,9 @@ public class Application {
     @Column(nullable = true)
     private Double aiMatchScore;
 
+    @Column(nullable = true)
+    private String status = "APPLIED";
+
     public Application() {}
 
     public Long getId() {
@@ -41,4 +44,7 @@ public class Application {
 
     public Double getAiMatchScore() { return aiMatchScore; }
     public void setAiMatchScore(Double aiMatchScore) { this.aiMatchScore = aiMatchScore; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }
