@@ -126,6 +126,35 @@ function App() {
     return () => eventSource.close();
   }, [token]);
 
+  useEffect(() => {
+    if (!token || userRole !== "ROLE_CANDIDATE") return;
+
+    // Connect to the private stream (passing the token in the URL!)
+    const eventSource = new EventSource(
+      `http://localhost:8000/api/jobs/notifications/stream?token=${token}`,
+    );
+
+    eventSource.addEventListener("status-updated", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        toast.success(data.message, {
+          duration: 6000,
+          icon: "🎉",
+          style: {
+            background: "#10b981",
+            color: "#fff",
+            fontWeight: "bold",
+          },
+        });
+      } catch (e) {
+        console.error("SSE Parse Error", e);
+      }
+    });
+
+    return () => eventSource.close();
+  }, [token, userRole]);
+
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
   const handleAuthChange = (e) =>
@@ -302,6 +331,7 @@ function App() {
             <CandidatePortal
               job={selectedJob}
               onClose={() => setIsModalOpen(false)}
+              token={token}
             />
           )}
         </div>

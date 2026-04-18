@@ -46,8 +46,19 @@ public class JobController {
     }
 
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamJobs() {
+    public SseEmitter streamJobs(){
         return notificationService.subscribe();
+    }
+
+    // --- PRIVATE CANDIDATE NOTIFICATION STREAM ---
+    @GetMapping(value = "/notifications/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamPersonalNotifications(Principal principal) {
+        if (principal == null) {
+            System.out.println("🚨 SSE CONNECTION REJECTED: Principal is null");
+            return null;
+        }
+        System.out.println("✅ SSE CONNECTION ACCEPTED FOR: " + principal.getName());
+        return notificationService.subscribePersonal(principal.getName());
     }
 
     @GetMapping("/{id}")

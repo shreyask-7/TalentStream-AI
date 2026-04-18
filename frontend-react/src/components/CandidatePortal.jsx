@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 
-const CandidatePortal = ({ job, onClose }) => {
+const CandidatePortal = ({ job, onClose, token }) => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -44,6 +44,7 @@ const CandidatePortal = ({ job, onClose }) => {
         {
           headers: {
             "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`, // Assuming token is stored in localStorage after login
           },
         },
       );

@@ -26,6 +26,9 @@ public class Application {
     @Column(nullable = true)
     private String status = "APPLIED";
 
+    @Column(nullable = true)
+    private String appliedByUsername;
+
     public Application() {}
 
     public Long getId() {
@@ -47,4 +50,7 @@ public class Application {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getAppliedByUsername() { return appliedByUsername; }
+    public void setAppliedByUsername(String appliedByUsername) { this.appliedByUsername = appliedByUsername; }
 }

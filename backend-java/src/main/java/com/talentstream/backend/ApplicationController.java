@@ -30,14 +30,24 @@ public class ApplicationController {
     @Autowired
     private JobRepository jobRepository;
 
+    @Autowired
+    private NotificationService notificationService;
+
     @PostMapping
     public ResponseEntity<?> applyForJob(
             @RequestParam("jobId") Long jobId,
             @RequestParam("name") String name,
             @RequestParam("email") String email,
-            @RequestParam("resume") MultipartFile resume) {
+            @RequestParam("resume") MultipartFile resume,
+            Principal principal) {
         try {
             Application application = applicationService.submitApplication(jobId, name, email, resume);
+
+            if(principal != null) {
+                application.setAppliedByUsername(principal.getName());
+                applicationRepository.save(application);
+            }
+
             return ResponseEntity.ok("Application submitted successfully! ID: " + application.getId());
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Application failed: " + e.getMessage());
@@ -85,8 +95,17 @@ public class ApplicationController {
         try {
             Application app = applicationRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Application not found for ID: " + id));
-            app.setStatus(payload.get("status"));
+            String newStatus = payload.get("status");
+            app.setStatus(newStatus);
             applicationRepository.save(app);
+
+            String username = app.getAppliedByUsername();
+            String jobTitle = app.getJob().getTitle();
+
+            if(username != null){
+                notificationService.notifyCandidate(username, jobTitle, newStatus);
+            }
+
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Failed to update status: " + e.getMessage());
