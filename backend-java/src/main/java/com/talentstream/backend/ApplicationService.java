@@ -18,9 +18,9 @@ public class ApplicationService {
     @Autowired
     private ApplicationRepository applicationRepository;
     @Autowired
-    private CandidateRepository candidateRepository;
-    @Autowired
     private JobRepository jobRepository;
+    @Autowired
+    private UserRepository userRepository;
     @Autowired
     private JobService jobService;
 
@@ -28,20 +28,12 @@ public class ApplicationService {
     @Autowired
     private KafkaProducerService kafkaProducerService;
 
-    public Application submitApplication(Long jobId, String name, String email, MultipartFile file) throws IOException {
+    public Application submitApplication(Long jobId, String contactEmail, MultipartFile file, String username) throws IOException {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found"));
 
-        Optional<Candidate> existingCandidate = candidateRepository.findByEmail(email);
-        Candidate candidate;
-        if(existingCandidate.isPresent()) {
-            candidate = existingCandidate.get();
-        } else {
-            candidate = new Candidate();
-            candidate.setName(name);
-            candidate.setEmail(email);
-            candidate =  candidateRepository.save(candidate);
-        }
+        User applyingUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User account not found"));
 
         File directory = new File(UPLOAD_DIR);
         if(!directory.exists()) {
@@ -53,9 +45,11 @@ public class ApplicationService {
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
         Application application = new Application();
-        application.setCandidate(candidate);
+        application.setUser(applyingUser);
+        application.setContactEmail(contactEmail);
         application.setJob(job);
         application.setResumeFilePath(filePath.toString());
+
         application =  applicationRepository.save(application);
 
         ResumeUploadedEvent event = new ResumeUploadedEvent(application.getId(), job.getId(), application.getResumeFilePath());

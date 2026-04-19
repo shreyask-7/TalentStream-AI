@@ -41,12 +41,11 @@ public class ApplicationController {
             @RequestParam("resume") MultipartFile resume,
             Principal principal) {
         try {
-            Application application = applicationService.submitApplication(jobId, name, email, resume);
-
-            if(principal != null) {
-                application.setAppliedByUsername(principal.getName());
-                applicationRepository.save(application);
+            if(principal == null) {
+                return ResponseEntity.status(401).body("Application failed: You must be logged in");
             }
+
+            Application application = applicationService.submitApplication(jobId, email, resume, principal.getName());
 
             return ResponseEntity.ok("Application submitted successfully! ID: " + application.getId());
         } catch (Exception e) {
@@ -99,7 +98,7 @@ public class ApplicationController {
             app.setStatus(newStatus);
             applicationRepository.save(app);
 
-            String username = app.getAppliedByUsername();
+            String username = app.getUser().getUsername();
             String jobTitle = app.getJob().getTitle();
 
             if(username != null){

@@ -10,6 +10,9 @@ import JobWorkspace from "./components/JobWorkspace.jsx";
 function App() {
   const [token, setToken] = useState(localStorage.getItem("jwt_token") || "");
   const [authForm, setAuthForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
     username: "",
     password: "",
     role: "ROLE_CANDIDATE",
@@ -129,7 +132,6 @@ function App() {
   useEffect(() => {
     if (!token || userRole !== "ROLE_CANDIDATE") return;
 
-    // Connect to the private stream (passing the token in the URL!)
     const eventSource = new EventSource(
       `http://localhost:8000/api/jobs/notifications/stream?token=${token}`,
     );
@@ -251,12 +253,47 @@ function App() {
             onSubmit={isLoginMode ? handleLogin : handleRegister}
             className="flex flex-col gap-4"
           >
+            {!isLoginMode && (
+              <>
+                <div className="flex gap-4">
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={authForm.firstName}
+                    onChange={handleAuthChange}
+                    placeholder="First Name"
+                    className="w-1/2 p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-slate-400"
+                    required
+                  />
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={authForm.lastName}
+                    onChange={handleAuthChange}
+                    placeholder="Last Name"
+                    className="w-1/2 p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-slate-400"
+                    required
+                  />
+                </div>
+                <input
+                  type="email"
+                  name="email"
+                  value={authForm.email}
+                  onChange={handleAuthChange}
+                  placeholder="Email Address"
+                  className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-slate-400"
+                  required
+                />
+              </>
+            )}
             <input
               type="text"
               name="username"
               value={authForm.username}
               onChange={handleAuthChange}
-              placeholder="Username"
+              placeholder={
+                isLoginMode ? "Username or Email" : "Choose a Username"
+              }
               className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-slate-400"
               required
             />

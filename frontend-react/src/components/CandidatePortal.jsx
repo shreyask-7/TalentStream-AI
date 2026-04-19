@@ -11,6 +11,26 @@ const CandidatePortal = ({ job, onClose, token }) => {
 
   const [isLoading, setIsLoading] = useState(false);
 
+  React.useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await axios.get("http://localhost:8000/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // Auto-fill the inputs!
+        setFormData({
+          ...formData,
+          name: res.data.fullName || res.data.username,
+          email: res.data.email || "",
+        });
+      } catch (err) {
+        console.error("Failed to auto-fill profile");
+      }
+    };
+    fetchProfile();
+  }, [token]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });

@@ -14,8 +14,11 @@ public class Application {
     private Job job;
 
     @ManyToOne
-    @JoinColumn(name = "candidate_id", nullable = false)
-    private Candidate candidate;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Column(nullable = false)
+    private String contactEmail;
 
     @Column(nullable = false)
     private String resumeFilePath;
@@ -25,9 +28,6 @@ public class Application {
 
     @Column(nullable = true)
     private String status = "APPLIED";
-
-    @Column(nullable = true)
-    private String appliedByUsername;
 
     public Application() {}
 
@@ -39,8 +39,11 @@ public class Application {
     public Job getJob() { return job; }
     public void setJob(Job job) { this.job = job; }
 
-    public Candidate getCandidate() { return candidate; }
-    public void setCandidate(Candidate candidate) { this.candidate = candidate; }
+    public  User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+
+    public String getContactEmail() { return contactEmail; }
+    public void setContactEmail(String contactEmail) { this.contactEmail = contactEmail; }
 
     public String getResumeFilePath() { return resumeFilePath; }
     public void setResumeFilePath(String resumeFilePath) { this.resumeFilePath = resumeFilePath; }
@@ -50,7 +53,4 @@ public class Application {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
-
-    public String getAppliedByUsername() { return appliedByUsername; }
-    public void setAppliedByUsername(String appliedByUsername) { this.appliedByUsername = appliedByUsername; }
 }

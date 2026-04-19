@@ -50,7 +50,6 @@ public class JobController {
         return notificationService.subscribe();
     }
 
-    // --- PRIVATE CANDIDATE NOTIFICATION STREAM ---
     @GetMapping(value = "/notifications/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamPersonalNotifications(Principal principal) {
         if (principal == null) {

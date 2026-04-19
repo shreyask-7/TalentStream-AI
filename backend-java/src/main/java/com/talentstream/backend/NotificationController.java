@@ -19,7 +19,6 @@ public class NotificationController {
 
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamPersonalNotifications(Principal principal) {
-        // Crash Guard: Check if Spring Security successfully verified the token!
         if (principal == null) {
             System.out.println("🚨 SSE CONNECTION REJECTED: Principal is null (Token failed!)");
             return null;
