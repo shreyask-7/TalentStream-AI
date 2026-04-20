@@ -23,12 +23,18 @@ public class ApplicationService {
     private UserRepository userRepository;
     @Autowired
     private JobService jobService;
+    @Autowired
+    private NotificationService notificationService;
 
     private final String UPLOAD_DIR = "uploads/";
     @Autowired
     private KafkaProducerService kafkaProducerService;
 
     public Application submitApplication(Long jobId, String contactEmail, MultipartFile file, String username) throws IOException {
+        if(applicationRepository.existsByJobIdAndUserUsername(jobId, username)) {
+            throw new RuntimeException("You have already applied for this role!");
+        }
+
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found"));
 
@@ -51,6 +57,10 @@ public class ApplicationService {
         application.setResumeFilePath(filePath.toString());
 
         application =  applicationRepository.save(application);
+
+        if(job.getPostedBy() != null) {
+            notificationService.notifyRecruiter(job.getPostedBy(), application);
+        }
 
         ResumeUploadedEvent event = new ResumeUploadedEvent(application.getId(), job.getId(), application.getResumeFilePath());
         kafkaProducerService.sendResumeEvent(event);

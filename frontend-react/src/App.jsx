@@ -8,7 +8,7 @@ import CandidatePortal from "./components/CandidatePortal.jsx";
 import JobWorkspace from "./components/JobWorkspace.jsx";
 
 function App() {
-  const [token, setToken] = useState(localStorage.getItem("jwt_token") || "");
+  const [token, setToken] = useState(sessionStorage.getItem("jwt_token") || "");
   const [authForm, setAuthForm] = useState({
     firstName: "",
     lastName: "",
@@ -27,6 +27,21 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
 
+  const [currentUser, setCurrentUser] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const getTimeAgo = (date) => {
+    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+    if (seconds < 60) return `${seconds} seconds ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minutes ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hours ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} days ago`;
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -36,7 +51,7 @@ function App() {
       );
       const jwt = response.data.token || response.data;
       setToken(jwt);
-      localStorage.setItem("jwt_token", jwt);
+      sessionStorage.setItem("jwt_token", jwt);
 
       const decoded = jwtDecode(jwt);
       setUserRole(decoded.role);
@@ -72,7 +87,7 @@ function App() {
 
   const handleLogout = () => {
     setToken("");
-    localStorage.removeItem("jwt_token");
+    sessionStorage.removeItem("jwt_token");
     setJobs([]);
     toast.success("Logged out successfully");
   };
@@ -130,21 +145,57 @@ function App() {
   }, [token]);
 
   useEffect(() => {
-    if (!token || userRole !== "ROLE_CANDIDATE") return;
+    if (!token) return;
+
+    const fetchProfile = async () => {
+      try {
+        const res = await axios.get("http://localhost:8000/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setCurrentUser(res.data);
+      } catch (err) {
+        console.error("Failed to load profile:", err);
+      }
+    };
+
+    fetchProfile();
 
     const eventSource = new EventSource(
       `http://localhost:8000/api/jobs/notifications/stream?token=${token}`,
     );
 
+    const addNotification = (message, type) => {
+      const newNotif = { id: Date.now(), message, type, time: new Date() };
+      setNotifications((prev) => [newNotif, ...prev]);
+    };
+
     eventSource.addEventListener("status-updated", (event) => {
       try {
         const data = JSON.parse(event.data);
-
+        addNotification(data.message, "status");
         toast.success(data.message, {
           duration: 6000,
           icon: "🎉",
           style: {
             background: "#10b981",
+            color: "#fff",
+            fontWeight: "bold",
+          },
+        });
+      } catch (e) {
+        console.error("SSE Parse Error", e);
+      }
+    });
+
+    eventSource.addEventListener("new-application", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        addNotification(data.message, "application");
+        toast.success(data.message, {
+          duration: 8000,
+          icon: "🚀",
+          style: {
+            background: "#8b5cf6",
             color: "#fff",
             fontWeight: "bold",
           },
@@ -212,31 +263,96 @@ function App() {
         </h1>
 
         {token && (
-          <div className="flex gap-4">
-            {userRole === "ROLE_CANDIDATE" && (
+          <div className="flex items-center gap-6">
+            {/* 🔔 THE NOTIFICATION BELL */}
+            <div className="relative">
               <button
-                onClick={() => setActiveView("candidate")}
-                className={`px-5 py-2 rounded-lg font-medium transition-all ${activeView === "candidate" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30" : "bg-slate-800 text-slate-300 hover:bg-slate-700"}`}
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="relative p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-full transition-all"
               >
-                Candidate Portal
-              </button>
-            )}
+                {/* Simple SVG Bell Icon */}
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                  ></path>
+                </svg>
 
-            {userRole === "ROLE_RECRUITER" && (
+                {/* Notification Badge/Counter */}
+                {notifications.length > 0 && (
+                  <span className="absolute top-0 right-0 flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full border-2 border-slate-900">
+                    {notifications.length}
+                  </span>
+                )}
+              </button>
+
+              {/* 📜 THE NOTIFICATION DROPDOWN */}
+              {showDropdown && (
+                <div className="absolute right-0 mt-3 w-80 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl z-50 overflow-hidden">
+                  <div className="p-3 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center">
+                    <h3 className="font-bold text-slate-200">Notifications</h3>
+                    <button
+                      onClick={() => setNotifications([])}
+                      className="text-xs text-blue-400 hover:text-blue-300"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <p className="p-4 text-sm text-slate-400 text-center">
+                        No new notifications.
+                      </p>
+                    ) : (
+                      notifications.map((notif) => (
+                        <div
+                          key={notif.id}
+                          className="p-4 border-b border-slate-700 hover:bg-slate-700/50 transition-colors"
+                        >
+                          <p className="text-sm text-slate-200">
+                            {notif.message}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-1 font-medium">
+                            {getTimeAgo(notif.time)}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 👤 THE USER PROFILE & LOGOUT */}
+            <div className="flex items-center gap-4 pl-6 border-l border-slate-700">
+              <div className="text-right">
+                <p className="text-sm font-bold text-slate-200">
+                  {currentUser
+                    ? currentUser.firstName
+                      ? `${currentUser.firstName} ${currentUser.lastName}`
+                      : currentUser.username
+                    : "Loading..."}
+                </p>
+                <p className="text-xs text-slate-400 capitalize">
+                  {userRole
+                    ? userRole.replace("ROLE_", "").toLowerCase()
+                    : "Loading..."}
+                </p>
+              </div>
               <button
-                onClick={() => setActiveView("recruiter")}
-                className={`px-5 py-2 rounded-lg font-medium transition-all ${activeView === "recruiter" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30" : "bg-slate-800 text-slate-300 hover:bg-slate-700"}`}
+                onClick={handleLogout}
+                className="px-4 py-2 bg-slate-800 text-slate-300 hover:bg-red-500 hover:text-white rounded-lg font-medium transition-all border border-slate-700 hover:border-red-500"
               >
-                Recruiter View
+                Log Out
               </button>
-            )}
-
-            <button
-              onClick={handleLogout}
-              className="px-5 py-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-lg font-medium transition-all border border-red-500/20 hover:border-red-500"
-            >
-              Log Out
-            </button>
+            </div>
           </div>
         )}
       </div>

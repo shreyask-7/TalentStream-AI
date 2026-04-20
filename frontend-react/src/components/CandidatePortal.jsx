@@ -81,7 +81,9 @@ const CandidatePortal = ({ job, onClose, token }) => {
       document.getElementById("resume-upload").value = "";
     } catch (error) {
       console.error("Upload failed:", error);
-      toast.error("❌ Failed to submit application. Check console.", {
+      const errorMessage =
+        error.response?.data || "Failed to submit application.";
+      toast.error(`❌ ${errorMessage}`, {
         id: loadingToast, // Replaces the loading toast with error
       });
     } finally {

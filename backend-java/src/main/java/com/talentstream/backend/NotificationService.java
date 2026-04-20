@@ -57,4 +57,22 @@ public class NotificationService {
             }
         }
     }
+
+    public void notifyRecruiter(String recruiterUsername, Application application) {
+        SseEmitter emitter = personalEmitters.get(recruiterUsername);
+        if(emitter != null) {
+            try {
+                Map<String, Object> payload = new HashMap<>();
+
+                payload.put("jobTitle", application.getJob().getTitle());
+                payload.put("candidateName", application.getUser().getFullName());
+                payload.put("applicationId", application.getId());
+                payload.put("message", application.getUser().getFullName() + "just applied for" + application.getJob().getTitle() + "!");
+
+                emitter.send(SseEmitter.event().name("new-application").data(payload));
+            } catch (Exception e) {
+                personalEmitters.remove(recruiterUsername);
+            }
+        }
+    }
 }
