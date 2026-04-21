@@ -53,6 +53,20 @@ public class ApplicationController {
         }
     }
 
+    @PreAuthorize("hasRole('CANDIDATE')")
+    @GetMapping("/me")
+    public ResponseEntity<?> getMySubmittedApplications(Principal principal) {
+        try {
+            if(principal == null) {
+                return ResponseEntity.status(401).body("Not authorized");
+            }
+            List<Application> myApplications = applicationRepository.findByUserUsername(principal.getName());
+            return ResponseEntity.ok(myApplications);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error fetching your applications: " + e.getMessage());
+        }
+    }
+
     @PutMapping("/{id}/score")
     public ResponseEntity<?> updateScore(@PathVariable Long id, @RequestBody Map<String, Double> payload) {
         try {
