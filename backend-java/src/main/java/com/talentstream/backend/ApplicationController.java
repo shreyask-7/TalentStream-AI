@@ -36,7 +36,6 @@ public class ApplicationController {
     @PostMapping
     public ResponseEntity<?> applyForJob(
             @RequestParam("jobId") Long jobId,
-            @RequestParam("name") String name,
             @RequestParam("email") String email,
             @RequestParam("resume") MultipartFile resume,
             Principal principal) {
@@ -144,6 +143,20 @@ public class ApplicationController {
                     .body(resource);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PreAuthorize("hasRole('RECRUITER')")
+    @PatchMapping("/{id}/feedback")
+    public ResponseEntity<?> submitAiFeedback(@PathVariable Long id, @RequestBody Map<String, Integer> payload) {
+        try {
+            Application app =  applicationRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Application not found for ID: " + id));
+            app.setAiFeedback(payload.get("aiFeedback"));
+            applicationRepository.save(app);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to save feedback: " + e.getMessage());
         }
     }
 }

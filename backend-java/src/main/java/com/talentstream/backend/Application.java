@@ -23,8 +23,11 @@ public class Application {
     @Column(nullable = false)
     private String resumeFilePath;
 
-    @Column(nullable = true)
+    @Column
     private Double aiMatchScore;
+
+    @Column(name = "ai_feedback")
+    private Integer aiFeedback;
 
     @Column(nullable = true)
     private String status = "APPLIED";
@@ -50,6 +53,9 @@ public class Application {
 
     public Double getAiMatchScore() { return aiMatchScore; }
     public void setAiMatchScore(Double aiMatchScore) { this.aiMatchScore = aiMatchScore; }
+
+    public Integer getAiFeedback() { return aiFeedback; }
+    public void setAiFeedback(Integer aiFeedback) { this.aiFeedback = aiFeedback; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

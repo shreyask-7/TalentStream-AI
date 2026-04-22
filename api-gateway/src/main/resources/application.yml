@@ -29,3 +29,7 @@ spring:
               uri: http://localhost:8080
               predicates:
                 - Path=/api/applications/**
+            - id:
+              uri: http://localhost:8080
+              predicates:
+                - Path=/api/analytics/**
