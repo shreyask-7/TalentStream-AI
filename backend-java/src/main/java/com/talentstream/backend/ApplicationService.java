@@ -1,8 +1,11 @@
 package com.talentstream.backend;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Counter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,6 +28,8 @@ public class ApplicationService {
     private JobService jobService;
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private MeterRegistry meterRegistry;
 
     private final String UPLOAD_DIR = "uploads/";
     @Autowired
@@ -64,6 +69,14 @@ public class ApplicationService {
 
         ResumeUploadedEvent event = new ResumeUploadedEvent(application.getId(), job.getId(), application.getResumeFilePath());
         kafkaProducerService.sendResumeEvent(event);
+
+        // Increment the custom business metric
+        Counter.builder("talentstream.application.submitted")
+                .description("Total number of candidate applications submitted")
+                .tag("jobId", String.valueOf(jobId))
+                .register(meterRegistry)
+                .increment();
+
         return application;
     }
 

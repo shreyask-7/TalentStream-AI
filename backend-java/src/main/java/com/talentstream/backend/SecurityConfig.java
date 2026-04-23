@@ -45,6 +45,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/jobs").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/jobs/**").authenticated()
 
+                        // Allow Prometheus Scraper
+                        .requestMatchers("/actuator/**").permitAll()
+
                         // 5. Catch-all
                         .anyRequest().authenticated()
                 )
