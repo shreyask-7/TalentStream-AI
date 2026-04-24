@@ -1,6 +1,7 @@
 import json
 import os
 import asyncio
+import time
 import httpx
 import requests
 from fastapi import FastAPI
@@ -8,10 +9,17 @@ from aiokafka import AIOKafkaConsumer
 from sentence_transformers import SentenceTransformer, util
 from dotenv import load_dotenv
 from resume_parser import extract_text_from_pdf
+from prometheus_client import make_asgi_app, Counter, Histogram
 
 load_dotenv()
 
 app = FastAPI()
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
+
+AI_JOBS_PROCESSED = Counter('ai_jobs_processed_total', 'Total jobs semantically analyzed')
+AI_RESUMES_SCORED = Counter('ai_resumes_scored_total', 'Total resumes scored against jobs')
+AI_PROCESSING_TIME = Histogram('ai_processing_time_seconds', 'Time spent processing AI vectors')
 
 print("Loading AI Model (This might take a few seconds)...")
 model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -103,6 +111,7 @@ async def consume_resume_events():
                     )
                     if put_response.status_code == 200:
                         print(f"✅ Successfully updated Application {app_id} with score {match_score}%")
+                        AI_RESUMES_SCORED.inc()
                     else:
                         print(f"⚠️ Failed to update Java Backend. Status: {put_response.status_code}")
             except Exception as e:
@@ -112,12 +121,17 @@ async def consume_resume_events():
 
 def calculate_match_score(resume_text: str, job_description: str) -> float:
     """Calculates semantic similarity between the resume and job description."""
+    start_time = time.time()
+
     if not resume_text or not job_description:
         return 0.0
     resume_vector = model.encode(resume_text, convert_to_tensor=True)
     job_vector = model.encode(job_description, convert_to_tensor=True)
     cosine_score = util.cos_sim(resume_vector, job_vector)
     percentage = round(cosine_score.item() * 100, 2)
+
+    AI_PROCESSING_TIME.observe(time.time() - start_time)
+
     return max(0.0, percentage)
 
 def process_job_with_ai(job_data):
@@ -138,6 +152,7 @@ def process_job_with_ai(job_data):
     
     print(f"🧠 AI Semantic Analysis Complete. Extracted Skills for Job {job_id}: {extracted_skills}")
     send_skills_to_backend(job_id, extracted_skills)
+    AI_JOBS_PROCESSED.inc()
 
 def send_skills_to_backend(job_id, skills):
     url = f"{BACKEND_URL}/api/jobs/{job_id}/skills"
