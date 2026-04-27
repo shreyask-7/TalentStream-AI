@@ -28,6 +28,7 @@ public class SecurityConfig {
                         // 1. Auth and Public Streams
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/stream").permitAll()
+                        .requestMatchers("/api/skills").permitAll()
 
                         // 2. Job Endpoints (Reading is public)
                         .requestMatchers(HttpMethod.GET, "/api/jobs").permitAll()

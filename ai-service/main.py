@@ -10,6 +10,7 @@ from sentence_transformers import SentenceTransformer, util
 from dotenv import load_dotenv
 from resume_parser import extract_text_from_pdf
 from prometheus_client import make_asgi_app, Counter, Histogram
+from keybert import KeyBERT
 
 load_dotenv()
 
@@ -25,22 +26,33 @@ print("Loading AI Model (This might take a few seconds)...")
 model = SentenceTransformer('all-MiniLM-L6-v2')
 print("✅ AI Model Loaded Successfully!")
 
-KNOWN_SKILLS = [
-    "Python", "Java", "React", "Spring Boot", "Docker", "Kubernetes",
-    "Kafka", "Machine Learning", "Data Analysis", "SQL", "PostgreSQL",
-    "AWS", "Microservices", "REST APIs", "Node.js", "C++", "Frontend Development",
-    "Backend Development", "System Design", "Vector Databases", "Pandas"
-]
+kw_model = KeyBERT(model=model)  # Initialize KeyBERT with the same SentenceTransformer model
+print("✅ AI Model & Keybert Loaded Successfully!")
 
-print("Generating Vector Embeddings for Knownledge Base...")
-skills_embeddings = model.encode(KNOWN_SKILLS, convert_to_tensor=True)
-print("✅ Knowledge Base Initialized!")
+KNOWN_SKILLS = []
+skills_embeddings = None
 
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
 KAFKA_TOPIC = "job-created"
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
 
 JAVA_BACKEND_DIR = "C:/AcePK7/Projects/TalentStream-AI"
+
+def load_skills_from_backend():
+    global KNOWN_SKILLS, skills_embeddings
+    print("🔄 Fetching Knowledge Base from Java Backend...")
+    try:
+        response = requests.get(f"{BACKEND_URL}/api/skills")
+        if response.status_code == 200:
+            KNOWN_SKILLS = response.json()
+            skills_embeddings = model.encode(KNOWN_SKILLS, convert_to_tensor=True)
+            print(f"✅ Knowledge Base Initialized with {len(KNOWN_SKILLS)} skills!")
+        else:
+            print(f"⚠️ Failed to fetch skills. Status: {response.status_code}")
+    except Exception as e:
+        print(f"🚨 Network error connecting to Java Backend: {e}")
+
+load_skills_from_backend()
 
 async def consume_kafka_messages():
     consumer = AIOKafkaConsumer(
@@ -135,6 +147,7 @@ def calculate_match_score(resume_text: str, job_description: str) -> float:
     return max(0.0, percentage)
 
 def process_job_with_ai(job_data):
+    global skills_embeddings
     job_id = job_data.get("id")
     description = job_data.get("description", "")
 
@@ -147,9 +160,21 @@ def process_job_with_ai(job_data):
 
     extracted_skills = []
     for i, score in enumerate(cosine_scores):
-        if score > 0.25: 
+        if score > 0.40: 
             extracted_skills.append(KNOWN_SKILLS[i])
     
+    print(f"🔍 AI is scanning for undocumented skills in Job {job_id}...")
+    keywords = kw_model.extract_keyword(description, keyphrase_ngram_range=(1,2), stop_words='english', top_n = 5)
+
+    for kw, score in keywords:
+        if score > 0.35 and not any(kw.lower() == s.lower() for s in KNOWN_SKILLS):
+            print(f"✨ AI discovered new skill: '{kw}'. Teaching backend...")
+            requests.post(f"{BACKEND_URL}/api/skills", json=kw)
+            KNOWN_SKILLS.append(kw)
+            extracted_skills.append(kw)
+    
+    skills_embeddings = model.encode(KNOWN_SKILLS, convert_to_tensor=True)
+
     print(f"🧠 AI Semantic Analysis Complete. Extracted Skills for Job {job_id}: {extracted_skills}")
     send_skills_to_backend(job_id, extracted_skills)
     AI_JOBS_PROCESSED.inc()
