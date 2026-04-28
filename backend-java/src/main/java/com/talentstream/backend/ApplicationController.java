@@ -67,13 +67,15 @@ public class ApplicationController {
     }
 
     @PutMapping("/{id}/score")
-    public ResponseEntity<?> updateScore(@PathVariable Long id, @RequestBody Map<String, Double> payload) {
+    public ResponseEntity<?> updateScore(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
         try {
-            Double score = payload.get("aiMatchScore");
-            if(score == null) {
+            Object scoreObj = payload.get("aiMatchScore");
+            if(scoreObj == null) {
                 return ResponseEntity.badRequest().body("Missing aiMatchScore in payload");
             }
-            Application updatedApp =  applicationService.updateApplicationScore(id, score);
+            Double score =  Double.valueOf(scoreObj.toString());
+            String skillGap = (String) payload.get("aiSkillGap");
+            Application updatedApp =  applicationService.updateApplicationScore(id, score,  skillGap);
             return ResponseEntity.ok("Score updated successfully for Application ID: " + updatedApp.getId());
         } catch (Exception e) {
             return  ResponseEntity.badRequest().body("Failed to update score: " + e.getMessage());

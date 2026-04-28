@@ -32,6 +32,9 @@ public class Application {
     @Column(nullable = true)
     private String status = "APPLIED";
 
+    @Column(columnDefinition = "TEXT")
+    private String aiSkillGap;
+
     public Application() {}
 
     public Long getId() {
@@ -59,4 +62,7 @@ public class Application {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getAiSkillGap() {return aiSkillGap; }
+    public void setAiSkillGap(String aiSkillGap) { this.aiSkillGap = aiSkillGap; }
 }

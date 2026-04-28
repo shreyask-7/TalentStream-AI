@@ -80,10 +80,13 @@ public class ApplicationService {
         return application;
     }
 
-    public Application updateApplicationScore(Long id, Double aiMatchScore) {
+    public Application updateApplicationScore(Long id, Double aiMatchScore, String aiSkillGap) {
         Application application = applicationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Application not found"));
         application.setAiMatchScore(aiMatchScore);
+        if(aiSkillGap != null) {
+            application.setAiSkillGap(aiSkillGap);
+        }
         return applicationRepository.save(application);
     }
 

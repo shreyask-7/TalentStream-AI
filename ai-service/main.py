@@ -114,8 +114,13 @@ async def consume_resume_events():
 
                 resume_text = extract_text_from_pdf(absolute_file_path)
                 match_score = calculate_match_score(resume_text, job_desc)
+                skill_gap_feedback = generate_skill_gap_feedback(resume_text, job_desc)
                 print(f"📊 Resume Match Score for Application {app_id}: {match_score}%")
-                payload = {"aiMatchScore": match_score}
+                print(f"📝 Skill Gap Feedback: {skill_gap_feedback}")
+                payload = {
+                    "aiMatchScore": match_score,
+                    "aiSkillGap": skill_gap_feedback
+                }
                 async with httpx.AsyncClient() as client:
                     put_response = await client.put(
                         f"{BACKEND_URL}/api/applications/{app_id}/score",
@@ -146,6 +151,19 @@ def calculate_match_score(resume_text: str, job_description: str) -> float:
 
     return max(0.0, percentage)
 
+def generate_skill_gap_feedback(resume_text: str, job_description: str) -> str:
+    print("🔍 Calculating Skill Gap...")
+    job_kws = kw_model.extract_keywords(job_description, keyphrase_ngram_range=(1,2), stop_words='english', top_n=10)
+    resume_kws = kw_model.extract_keywords(resume_text, keyphrase_ngram_range=(1,2), stop_words='english', top_n=20)
+    job_skills = {kw[0].lower() for kw in job_kws}
+    resume_skills = {kw[0].lower() for kw in resume_kws}
+    missing_skills = job_skills - resume_skills
+    if not missing_skills:
+        return "Your profile aligns perfectly with the core technical keywords of this role!"
+    formatted_skills = ", ".join(list(missing_skills)[:4]).title()
+    
+    return f"To strengthen your profile for similar roles, consider highlighting your experience with: {formatted_skills}."
+
 def process_job_with_ai(job_data):
     global skills_embeddings
     job_id = job_data.get("id")
@@ -154,29 +172,43 @@ def process_job_with_ai(job_data):
     if not description:
         print(f"⚠️  No description found for Job {job_id}. Skipping...")
         return
-    
-    jb_embedding = model.encode(description, convert_to_tensor=True)
-    cosine_scores = util.cos_sim(jb_embedding, skills_embeddings)[0]
 
-    extracted_skills = []
-    for i, score in enumerate(cosine_scores):
-        if score > 0.40: 
-            extracted_skills.append(KNOWN_SKILLS[i])
-    
     print(f"🔍 AI is scanning for undocumented skills in Job {job_id}...")
-    keywords = kw_model.extract_keyword(description, keyphrase_ngram_range=(1,2), stop_words='english', top_n = 5)
+    keywords = kw_model.extract_keywords(description, keyphrase_ngram_range=(1,2), stop_words='english', top_n = 15)
 
-    for kw, score in keywords:
-        if score > 0.35 and not any(kw.lower() == s.lower() for s in KNOWN_SKILLS):
-            print(f"✨ AI discovered new skill: '{kw}'. Teaching backend...")
-            requests.post(f"{BACKEND_URL}/api/skills", json=kw)
-            KNOWN_SKILLS.append(kw)
-            extracted_skills.append(kw)
+    extracted_skills = set()
+    new_skills_discovered = False
+
+    known_skills_lower = {s.lower() for s in KNOWN_SKILLS}
+
+    for kw, kw_weight in keywords:
+        kw_vector = model.encode(kw, convert_to_tensor=True)
+        cosine_scores = util.cos_sim(kw_vector, skills_embeddings)[0]
+        best_match_idx = cosine_scores.argmax().item()
+        best_match_score = cosine_scores[best_match_idx].item()
+
+        if best_match_score > 0.82:
+            matched_skill = KNOWN_SKILLS[best_match_idx]
+            extracted_skills.add(matched_skill)
+
+        elif kw_weight > 0.35:
+            if not any(kw.lower() == s.lower() for s in KNOWN_SKILLS):
+                print(f"✨ AI discovered new skill: '{kw}'. Teaching backend...")
+                try:
+                    requests.post(f"{BACKEND_URL}/api/skills", json=kw)
+                except Exception as e:
+                    print(f"⚠️ Could not save '{kw}' to backend: {e}")
+                
+                KNOWN_SKILLS.append(kw)
+                extracted_skills.add(kw)
+                new_skills_discovered = True
     
-    skills_embeddings = model.encode(KNOWN_SKILLS, convert_to_tensor=True)
+    if new_skills_discovered:
+        skills_embeddings = model.encode(KNOWN_SKILLS, convert_to_tensor=True)
+    final_skills_list = list(extracted_skills)
 
     print(f"🧠 AI Semantic Analysis Complete. Extracted Skills for Job {job_id}: {extracted_skills}")
-    send_skills_to_backend(job_id, extracted_skills)
+    send_skills_to_backend(job_id, final_skills_list)
     AI_JOBS_PROCESSED.inc()
 
 def send_skills_to_backend(job_id, skills):
