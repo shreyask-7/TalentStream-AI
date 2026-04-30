@@ -23,6 +23,7 @@ public class SkillController {
 
     @PostMapping
     public ResponseEntity<?> addSkill(@RequestBody String skillName) {
+        String cleanName = skillName.replaceAll("\"", "").trim();
         if(skillRepository.findByNameIgnoreCase(skillName).isEmpty()) {
             skillRepository.save(new Skill(skillName));
             return ResponseEntity.ok("Skill added");

@@ -161,4 +161,26 @@ public class ApplicationController {
             return ResponseEntity.badRequest().body("Failed to save feedback: " + e.getMessage());
         }
     }
+
+    @GetMapping("/training-data")
+    public ResponseEntity<?> getTrainingData(){
+        try {
+           List<Application> feedbackApps = applicationRepository.findByAiFeedbackIsNotNull();
+           List<Map<String, Object>> trainingData = feedbackApps.stream().map(app -> {
+               int missingSkillsCount = 0;
+               if(app.getAiSkillGap() != null && app.getAiSkillGap().contains(":")) {
+                    String skillsPart = app.getAiSkillGap().split(":")[1];
+                    missingSkillsCount = skillsPart.split(",").length;
+               }
+               return Map.<String, Object>of(
+                       "matchScore", app.getAiMatchScore() != null ? app.getAiMatchScore(): 0.0,
+                       "missingSkillsCount", missingSkillsCount,
+                       "feedback", app.getAiFeedback()
+               );
+           }).collect(Collectors.toList());
+           return ResponseEntity.ok(trainingData);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

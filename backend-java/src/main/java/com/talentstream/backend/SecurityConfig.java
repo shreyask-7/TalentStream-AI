@@ -29,6 +29,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/stream").permitAll()
                         .requestMatchers("/api/skills").permitAll()
+                        .requestMatchers("/api/applications/training-data").permitAll()
 
                         // 2. Job Endpoints (Reading is public)
                         .requestMatchers(HttpMethod.GET, "/api/jobs").permitAll()

@@ -11,6 +11,7 @@ public interface ApplicationRepository  extends JpaRepository<Application, Long>
     List<Application> findByJobIdIn(List<Long> jobIds);
     boolean existsByJobIdAndUserUsername(Long jobId, String username);
     List<Application> findByUserUsername(String username);
+    List<Application> findByAiFeedbackIsNotNull();
 
     @Query("SELECT a.status, COUNT(a) FROM Application a WHERE a.job.postedBy = :username GROUP BY a.status")
     List<Object[]> countApplicationsByStatusForRecruiter(@Param("username") String username);
