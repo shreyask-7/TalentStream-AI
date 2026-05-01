@@ -1,6 +1,7 @@
 package com.talentstream.backend;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,12 @@ public class AuthController {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Value("${m2m.client.id}")
+    private String validClientId;
+
+    @Value("${m2m.client.secret}")
+    private String validClientSecret;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user){
@@ -65,5 +72,18 @@ public class AuthController {
         User user = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("Error: User not found"));
         return ResponseEntity.ok(user);
+    }
+
+    @PostMapping("/m2m")
+    public ResponseEntity<?> authenticateMachine(@RequestBody Map<String, String> credentials) {
+        String clientId = credentials.get("clientId");
+        String clientSecret = credentials.get("clientSecret");
+
+        if(validClientId.equals(clientId) && validClientSecret.equals(clientSecret)) {
+            String m2mToken = jwtUtil.generateM2MToken(clientId);
+            return ResponseEntity.ok(Map.of("token", m2mToken));
+        }
+
+        return ResponseEntity.status(401).body("Invalid M2M Credentials");
     }
 }

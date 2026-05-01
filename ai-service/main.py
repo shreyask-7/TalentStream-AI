@@ -41,7 +41,32 @@ KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
 KAFKA_TOPIC = "job-created"
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
 
+M2M_CLIENT_ID = os.getenv("M2M_CLIENT_ID", "ai-vector-engine-v1")
+M2M_CLIENT_SECRET = os.getenv("M2M_CLIENT_SECRET", "super-secret-cryptographic-key-change-in-prod")
+m2m_jwt_token = None
+
 JAVA_BACKEND_DIR = "C:/AcePK7/Projects/TalentStream-AI"
+
+def get_m2m_headers():
+    global m2m_jwt_token
+    if m2m_jwt_token:
+        return {"Authorization": f"Bearer {m2m_jwt_token}"}
+    print("🔐 Negotiating M2M Handshake with Java Bouncer...")
+    try:
+        response = requests.post(
+            f"{BACKEND_URL}/api/auth/m2m",
+            json={"clientId": M2M_CLIENT_ID, "clientSecret": M2M_CLIENT_SECRET}
+        )
+        if response.status_code == 200:
+            m2m_jwt_token = response.json().get("token")
+            print("🎟️ Handshake successful! VIP Wristband secured.")
+            return {"Authorization": f"Bearer {m2m_jwt_token}"}
+        else:
+            print(f"❌ Handshake failed. Bouncer said: {response.status_code}")
+            return {}
+    except Exception as e:
+        print(f"🚨 Network error during M2M handshake: {e}")
+        return {}
 
 def load_skills_from_backend():
     global KNOWN_SKILLS, skills_embeddings
@@ -140,7 +165,8 @@ async def consume_resume_events():
                 async with httpx.AsyncClient() as client:
                     put_response = await client.put(
                         f"{BACKEND_URL}/api/applications/{app_id}/score",
-                        json=payload
+                        json=payload,
+                        headers=get_m2m_headers()
                     )
                     if put_response.status_code == 200:
                         print(f"✅ Successfully updated Application {app_id} with score {final_score}%")
@@ -156,23 +182,11 @@ def train_feedback_model():
     global feedback_model, IS_MODEL_TRAINED
     print("🔄 Fetching historical ML training data from Java...")
     try:
-        response = requests.get(f"{BACKEND_URL}/api/applications/training-data")
+        response = requests.get(f"{BACKEND_URL}/api/applications/training-data", headers = get_m2m_headers())
         if response.status_code == 200:
             data = response.json()
             if len(data) < 3:
                 print(f"⚠️ Only {len(data)} feedback records found. Waiting for more data to activate ML Loop.")
-                # data = [
-                #     {"matchScore": 95.0, "missingSkillsCount": 0, "feedback": 1},   # Perfect match
-                #     {"matchScore": 88.0, "missingSkillsCount": 1, "feedback": 1},   # Good match
-                #     {"matchScore": 92.0, "missingSkillsCount": 4, "feedback": -1},  # High score but missing core skills! (Bias)
-                #     {"matchScore": 85.0, "missingSkillsCount": 5, "feedback": -1},  # Missed too many skills
-                #     {"matchScore": 40.0, "missingSkillsCount": 8, "feedback": -1},  # Terrible match
-                #     {"matchScore": 75.0, "missingSkillsCount": 2, "feedback": 1},   # Decent match
-                #     {"matchScore": 81.0, "missingSkillsCount": 3, "feedback": -1},  # Borderline, rejected
-                #     {"matchScore": 98.0, "missingSkillsCount": 1, "feedback": 1},   # Great match
-                #     {"matchScore": 55.0, "missingSkillsCount": 6, "feedback": -1},  # Bad match
-                #     {"matchScore": 89.0, "missingSkillsCount": 0, "feedback": 1},   # Great match
-                # ]
                 return
             X = []
             y = []
@@ -250,7 +264,7 @@ def process_job_with_ai(job_data):
                 pretty_kw = kw.title()
                 print(f"✨ AI discovered new skill: '{pretty_kw}'. Teaching backend...")
                 try:
-                    requests.post(f"{BACKEND_URL}/api/skills", json={"name": pretty_kw})
+                    requests.post(f"{BACKEND_URL}/api/skills", json=pretty_kw, headers=get_m2m_headers())
                 except Exception as e:
                     print(f"⚠️ Could not save '{pretty_kw}' to backend: {e}")
 
@@ -270,7 +284,7 @@ def send_skills_to_backend(job_id, skills):
     url = f"{BACKEND_URL}/api/jobs/{job_id}/skills"
     payload = {"skills": skills}
     try:
-        response = requests.put(url, json=payload)
+        response = requests.put(url, json=payload, headers=get_m2m_headers())
         if response.status_code in [200, 201]:
             print(f"✅ Successfully injected skills into Java Backend for Job {job_id}!")
         else:

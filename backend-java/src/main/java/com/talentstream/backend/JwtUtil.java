@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.Map;
+import java.util.HashMap;
 
 @Component
 public class JwtUtil {
@@ -38,5 +40,23 @@ public class JwtUtil {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private java.security.Key getSigningKey() {
+        byte[] keyBytes = SECRET.getBytes();
+        return io.jsonwebtoken.security.Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    public String generateM2MToken(String clientId) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("roles", "ROLE_INTERNAL_AI");
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(clientId)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000*60*60))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+
     }
 }
