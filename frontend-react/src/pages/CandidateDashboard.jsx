@@ -229,50 +229,102 @@ export default function Login({
             myApplications.map((app) => (
               <div
                 key={app.id}
-                className="bg-slate-800 p-6 rounded-xl border border-slate-700 flex justify-between items-center hover:border-slate-500 transition-colors"
+                className="bg-slate-800 p-6 rounded-xl border border-slate-700 flex flex-col gap-4 hover:border-slate-500 transition-colors"
               >
-                <div>
-                  <h3 className="text-lg font-bold text-slate-100">
-                    {app.job.title}
-                  </h3>
-                  <p className="text-sm text-slate-400 mt-1">
-                    {app.job.company}
-                  </p>
-                </div>
-                <div className="flex items-center gap-6">
-                  {/* AI Match Score Badge (If parsed) */}
-                  {app.aiMatchScore ? (
-                    <div className="flex flex-col items-center">
-                      <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">
-                        AI Match
-                      </span>
-                      <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg font-bold text-sm">
-                        {app.aiMatchScore}%
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">
-                        AI Match
-                      </span>
-                      <span className="text-sm text-slate-500 italic">
-                        Processing...
-                      </span>
-                    </div>
-                  )}
+                {/* Top Row: Basic Info */}
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-100">
+                      {app.job.title}
+                    </h3>
+                    <p className="text-sm text-slate-400 mt-1">
+                      {app.job.company}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    {/* AI Match Score Badge */}
+                    {app.aiMatchScore ? (
+                      <div className="flex flex-col items-center">
+                        <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">
+                          AI Match
+                        </span>
+                        <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg font-bold text-sm">
+                          {app.aiMatchScore}%
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">
+                          AI Match
+                        </span>
+                        <span className="text-sm text-slate-500 italic">
+                          Processing...
+                        </span>
+                      </div>
+                    )}
 
-                  {/* Status Badge */}
-                  <div className="flex flex-col items-center">
-                    <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">
-                      Status
-                    </span>
-                    <span
-                      className={`px-4 py-1 border rounded-full text-sm font-bold ${getStatusBadge(app.status)}`}
-                    >
-                      {app.status}
-                    </span>
+                    {/* Status Badge */}
+                    <div className="flex flex-col items-center">
+                      <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">
+                        Status
+                      </span>
+                      <span
+                        className={`px-4 py-1 border rounded-full text-sm font-bold ${getStatusBadge(app.status)}`}
+                      >
+                        {app.status}
+                      </span>
+                    </div>
                   </div>
                 </div>
+
+                {/* 👇 NEW: PRODUCT EMPATHY & SKILL GAP ANALYSIS 👇 */}
+                {app.status === "REJECTED" && (
+                  <div className="mt-2 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                    <div className="text-blue-400 mt-0.5">
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        ></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-blue-400 mb-1">
+                        AI Career Coach Insight
+                      </h4>
+                      <p className="text-sm text-slate-300">
+                        While this role wasn't a perfect match, our AI noted a
+                        strong foundation. To increase your match score for
+                        similar roles, consider brushing up on your missing
+                        skills.
+                      </p>
+
+                      {/* If your backend sends a skillGap array, map it here. If not, this is a great placeholder! */}
+                      {app.skillGap && app.skillGap.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="text-xs text-slate-400 py-1">
+                            Recommended Focus Areas:
+                          </span>
+                          {app.skillGap.map((skill, i) => (
+                            <span
+                              key={i}
+                              className="px-2 py-1 bg-slate-900 text-blue-300 border border-blue-500/20 rounded-md text-xs font-medium"
+                            >
+                              + {skill}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}

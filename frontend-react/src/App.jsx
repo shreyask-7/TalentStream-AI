@@ -190,11 +190,32 @@ function App() {
     notifEventSource.addEventListener("status-updated", (event) => {
       const data = JSON.parse(event.data);
       addNotification(data.message);
-      toast.success(data.message, {
-        duration: 6000,
-        icon: "🎉",
-        style: { background: "#10b981", color: "#fff" },
-      });
+
+      // 👇 THE EMPATHY ENGINE 👇
+      const msg = data.message.toLowerCase();
+
+      if (msg.includes("rejected")) {
+        // Supportive, constructive tone. Blue instead of aggressive Red.
+        toast(data.message, {
+          duration: 8000,
+          icon: "💡",
+          style: { background: "#3b82f6", color: "#fff", fontWeight: "500" },
+        });
+      } else if (msg.includes("offered") || msg.includes("hired")) {
+        // Massive Celebration
+        toast.success(data.message, {
+          duration: 8000,
+          icon: "🎉",
+          style: { background: "#10b981", color: "#fff", fontWeight: "bold" },
+        });
+      } else {
+        // Standard updates (Reviewing, Interviewing)
+        toast(data.message, {
+          duration: 6000,
+          icon: "👋",
+          style: { background: "#6366f1", color: "#fff" },
+        });
+      }
     });
 
     notifEventSource.addEventListener("new-application", (event) => {
