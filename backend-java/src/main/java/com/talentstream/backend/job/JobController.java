@@ -66,6 +66,8 @@ public class JobController {
         return ResponseEntity.ok().build();
     }
 
+    // 👇 THIS IS THE MAGIC FIX 👇
+    @PreAuthorize("hasAnyRole('RECRUITER', 'SYSTEM')")
     @PutMapping("/{id}/skills")
     public ResponseEntity<Void> updateSkills(@PathVariable("id") Long id, @RequestBody Map<String, List<String>> payload) {
         jobService.updateJobSkills(id, payload.get("skills"));

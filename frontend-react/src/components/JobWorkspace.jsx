@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import toast from "react-hot-toast";
+
+// --- API Layer ---
+import { fetchJobApplications } from "../api/jobs";
+import {
+  updateApplicationStatus,
+  submitApplicationFeedback,
+  downloadResume,
+} from "../api/applications";
 
 const JobWorkspace = ({ job, token, onBack }) => {
   const [applications, setApplications] = useState([]);
@@ -12,14 +19,9 @@ const JobWorkspace = ({ job, token, onBack }) => {
 
   const fetchApplications = async () => {
     try {
-      const response = await axios.get(
-        `http://localhost:8000/api/jobs/${job.id}/applications`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const data = await fetchJobApplications(job.id);
       // Sort by aiMatchScore
-      const sortedApps = response.data.sort(
+      const sortedApps = data.sort(
         (a, b) => (b.aiMatchScore || 0) - (a.aiMatchScore || 0),
       );
       setApplications(sortedApps);
@@ -32,11 +34,7 @@ const JobWorkspace = ({ job, token, onBack }) => {
 
   const updateStatus = async (appId, newStatus) => {
     try {
-      await axios.patch(
-        `http://localhost:8000/api/applications/${appId}/status`,
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      await updateApplicationStatus(appId, newStatus);
       toast.success("Candidate status updated!");
       fetchApplications();
     } catch (error) {
@@ -52,11 +50,7 @@ const JobWorkspace = ({ job, token, onBack }) => {
       ),
     );
     try {
-      await axios.patch(
-        `http://localhost:8000/api/applications/${appId}/feedback`,
-        { feedback: feedbackValue },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      await submitApplicationFeedback(appId, feedbackValue);
       toast.success("AI feedback logged! 🧠");
     } catch (error) {
       toast.error("Failed to log feedback.");
@@ -67,17 +61,11 @@ const JobWorkspace = ({ job, token, onBack }) => {
   const handleViewResume = async (appId) => {
     const loadingToast = toast.loading("Decrypting and opening resume...");
     try {
-      const response = await axios.get(
-        `http://localhost:8000/api/applications/${appId}/resume`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          responseType: "blob", // CRITICAL: Tells Axios we are downloading a file, not JSON
-        },
-      );
+      const blobData = await downloadResume(appId);
 
       // Create a temporary local URL for the downloaded file
       const fileURL = window.URL.createObjectURL(
-        new Blob([response.data], { type: "application/pdf" }),
+        new Blob([blobData], { type: "application/pdf" }),
       );
 
       // Open it in a new tab!
@@ -151,7 +139,6 @@ const JobWorkspace = ({ job, token, onBack }) => {
                   className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors group"
                 >
                   <td className="py-4 pl-4">
-                    {/* 👇 Updated to use the true relational User identity! 👇 */}
                     <p className="font-semibold text-slate-200">
                       {app.user?.firstName
                         ? `${app.user.firstName} ${app.user.lastName}`
@@ -172,17 +159,13 @@ const JobWorkspace = ({ job, token, onBack }) => {
                           : "Pending"}
                       </span>
 
-                      {/* 👇 NEW: The AI Feedback Thumbs 👇 */}
+                      {/* AI Feedback Thumbs */}
                       {app.aiMatchScore != null && (
                         <div className="flex items-center gap-2 bg-slate-900/50 rounded-full p-1 border border-slate-700">
                           <button
                             title="Accurate Match"
                             onClick={() => submitFeedback(app.id, 1)}
-                            className={`p-1 rounded-full transition-all ${
-                              app.aiFeedback === 1
-                                ? "bg-green-500/20 text-green-400 scale-110"
-                                : "text-slate-500 hover:text-green-400 hover:bg-slate-700"
-                            }`}
+                            className={`p-1 rounded-full transition-all ${app.aiFeedback === 1 ? "bg-green-500/20 text-green-400 scale-110" : "text-slate-500 hover:text-green-400 hover:bg-slate-700"}`}
                           >
                             <svg
                               className="w-4 h-4"
@@ -198,18 +181,11 @@ const JobWorkspace = ({ job, token, onBack }) => {
                               ></path>
                             </svg>
                           </button>
-
-                          {/* Divider */}
                           <div className="w-px h-4 bg-slate-700"></div>
-
                           <button
                             title="Inaccurate Match"
                             onClick={() => submitFeedback(app.id, -1)}
-                            className={`p-1 rounded-full transition-all ${
-                              app.aiFeedback === -1
-                                ? "bg-red-500/20 text-red-400 scale-110"
-                                : "text-slate-500 hover:text-red-400 hover:bg-slate-700"
-                            }`}
+                            className={`p-1 rounded-full transition-all ${app.aiFeedback === -1 ? "bg-red-500/20 text-red-400 scale-110" : "text-slate-500 hover:text-red-400 hover:bg-slate-700"}`}
                           >
                             <svg
                               className="w-4 h-4"

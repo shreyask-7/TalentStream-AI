@@ -10,7 +10,6 @@ const JobCard = ({ job, onDelete, onApply, onManage }) => {
       : [];
 
   return (
-    //  Convert standard div to motion.div with animation props
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}

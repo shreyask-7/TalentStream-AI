@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import axios from "axios";
+import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import { getProfile } from "../api/auth";
+import { submitApplication } from "../api/applications"; // Or wherever you exported it!
 
 const CandidatePortal = ({ job, onClose, token }) => {
   const [formData, setFormData] = useState({
@@ -11,25 +12,22 @@ const CandidatePortal = ({ job, onClose, token }) => {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/api/auth/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
+        const profileData = await getProfile();
         // Auto-fill the inputs!
-        setFormData({
-          ...formData,
-          name: res.data.fullName || res.data.username,
-          email: res.data.email || "",
-        });
+        setFormData((prev) => ({
+          ...prev,
+          name: profileData.fullName || profileData.username,
+          email: profileData.email || "",
+        }));
       } catch (err) {
         console.error("Failed to auto-fill profile");
       }
     };
     fetchProfile();
-  }, [token]);
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -58,24 +56,15 @@ const CandidatePortal = ({ job, onClose, token }) => {
     submitData.append("resume", formData.resume);
 
     try {
-      const response = await axios.post(
-        "http://localhost:8000/api/applications",
-        submitData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`, // Assuming token is stored in localStorage after login
-          },
-        },
-      );
+      const responseData = await submitApplication(submitData);
 
       toast.success(
-        `✅ Success! Application ID: ${response.data.id || "Submitted"}`,
-        {
-          id: loadingToast, // Replaces the loading toast with success
-        },
+        `✅ Success! Application ID: ${responseData.id || "Submitted"}`,
+        { id: loadingToast },
       );
+
       onClose(); // Close the modal after successful submission
+
       // Reset form
       setFormData({ name: "", email: "", resume: null });
       document.getElementById("resume-upload").value = "";
@@ -83,9 +72,7 @@ const CandidatePortal = ({ job, onClose, token }) => {
       console.error("Upload failed:", error);
       const errorMessage =
         error.response?.data || "Failed to submit application.";
-      toast.error(`❌ ${errorMessage}`, {
-        id: loadingToast, // Replaces the loading toast with error
-      });
+      toast.error(`❌ ${errorMessage}`, { id: loadingToast });
     } finally {
       setIsLoading(false);
     }

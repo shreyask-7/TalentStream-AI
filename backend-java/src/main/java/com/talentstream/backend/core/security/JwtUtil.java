@@ -48,15 +48,12 @@ public class JwtUtil {
     }
 
     public String generateM2MToken(String clientId) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("roles", "ROLE_INTERNAL_AI");
         return Jwts.builder()
-                .setClaims(claims)
                 .setSubject(clientId)
+                .claim("role", "ROLE_SYSTEM")
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000*60*60))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
-
     }
 }

@@ -2,6 +2,7 @@ package com.talentstream.backend.skill;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,8 @@ public class SkillController {
         return ResponseEntity.ok(skillService.getAllSkills());
     }
 
+    // 👇 THIS IS THE FIX 👇
+    @PreAuthorize("hasAnyRole('RECRUITER', 'SYSTEM')")
     @PostMapping
     public ResponseEntity<?> addSkill(@RequestBody String skillName) {
         boolean isAdded = skillService.addSkill(skillName);
