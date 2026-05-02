@@ -1,0 +1,80 @@
+package com.talentstream.backend.stream;
+
+import com.talentstream.backend.application.Application;
+import com.talentstream.backend.job.Job;
+import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
+import java.util.HashMap;
+
+@Service
+public class NotificationService {
+    private final CopyOnWriteArrayList<SseEmitter> globalEmitters = new CopyOnWriteArrayList<>();
+
+    private final ConcurrentHashMap<String, SseEmitter> personalEmitters = new ConcurrentHashMap<>();
+
+    public SseEmitter subscribe() {
+        SseEmitter emitter = new SseEmitter(0L);
+        globalEmitters.add(emitter);
+        emitter.onCompletion(() -> globalEmitters.remove(emitter));
+        emitter.onTimeout(() -> globalEmitters.remove(emitter));
+        return emitter;
+    }
+
+    public void notifyJobUpdated(Job updatedJob) {
+        for (SseEmitter emitter : globalEmitters) {
+            try {
+                emitter.send(SseEmitter.event().name("job-updated").data(updatedJob));
+            } catch (Exception e) {
+                globalEmitters.remove(emitter);
+            }
+        }
+    }
+
+    public SseEmitter subscribePersonal(String username) {
+        SseEmitter emitter = new SseEmitter(0L);
+        personalEmitters.put(username, emitter);
+
+        emitter.onCompletion(() -> personalEmitters.remove(username));
+        emitter.onTimeout(() -> personalEmitters.remove(username));
+        emitter.onError((e) -> personalEmitters.remove(username));
+
+        return emitter;
+    }
+
+    public void notifyCandidate(String username, String jobTitle, String newStatus) {
+        SseEmitter emitter = personalEmitters.get(username);
+        if (emitter != null) {
+            try {
+                Map<String, String> payload = new HashMap<>();
+                payload.put("jobTitle", jobTitle);
+                payload.put("newStatus", newStatus);
+                payload.put("message", "Your application for " + jobTitle + " was moved to " + newStatus + "!");
+
+                emitter.send(SseEmitter.event().name("status-updated").data(payload));
+            } catch (Exception e) {
+                personalEmitters.remove(username);
+            }
+        }
+    }
+
+    public void notifyRecruiter(String recruiterUsername, Application application) {
+        SseEmitter emitter = personalEmitters.get(recruiterUsername);
+        if(emitter != null) {
+            try {
+                Map<String, Object> payload = new HashMap<>();
+
+                payload.put("jobTitle", application.getJob().getTitle());
+                payload.put("candidateName", application.getUser().getFullName());
+                payload.put("applicationId", application.getId());
+                payload.put("message", application.getUser().getFullName() + "just applied for" + application.getJob().getTitle() + "!");
+
+                emitter.send(SseEmitter.event().name("new-application").data(payload));
+            } catch (Exception e) {
+                personalEmitters.remove(recruiterUsername);
+            }
+        }
+    }
+}
