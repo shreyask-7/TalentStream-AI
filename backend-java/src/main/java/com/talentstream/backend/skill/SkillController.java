@@ -19,7 +19,6 @@ public class SkillController {
         return ResponseEntity.ok(skillService.getAllSkills());
     }
 
-    // 👇 THIS IS THE FIX 👇
     @PreAuthorize("hasAnyRole('RECRUITER', 'SYSTEM')")
     @PostMapping
     public ResponseEntity<?> addSkill(@RequestBody String skillName) {

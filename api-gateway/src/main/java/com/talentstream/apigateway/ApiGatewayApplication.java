@@ -12,13 +12,4 @@ public class ApiGatewayApplication {
     public static void main(String[] args) {
         SpringApplication.run(ApiGatewayApplication.class, args);
     }
-
-    @Bean
-    public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
-        return builder.routes()
-                .route("job-service", r -> r.path("/api/jobs", "/api/jobs/**")
-                        .uri("http://localhost:8080/jobs"))
-                .build();
-    }
-
 }

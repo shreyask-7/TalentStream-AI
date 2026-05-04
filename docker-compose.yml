@@ -72,6 +72,11 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
 
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: talentstream-zipkin
+    ports:
+      - "9411:9411"
 volumes:
   postgres_data:
   grafana_data:

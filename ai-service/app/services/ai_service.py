@@ -62,7 +62,7 @@ def process_job_with_ai(job_data):
                 pretty_kw = kw.title()
                 print(f"✨ AI discovered new skill: '{pretty_kw}'. Teaching backend...")
                 try:
-                    requests.post(f"{BACKEND_URL}/api/skills", json=pretty_kw, headers=get_m2m_headers())
+                    requests.post(f"{BACKEND_URL}/api/skills", json={"name": pretty_kw}, headers=get_m2m_headers())
                 except Exception as e:
                     print(f"⚠️ Could not save '{pretty_kw}' to backend: {e}")
 

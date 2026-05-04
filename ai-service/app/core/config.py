@@ -7,7 +7,7 @@ load_dotenv()
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
 JAVA_BACKEND_DIR = os.getenv("JAVA_BACKEND_DIR", "C:/AcePK7/Projects/TalentStream-AI")
-
+ZIPKIN_ENDPOINT = os.getenv("ZIPKIN_ENDPOINT", "http://localhost:9411/api/v2/spans")
 M2M_CLIENT_ID = os.getenv("M2M_CLIENT_ID", "ai-vector-engine-v1")
 M2M_CLIENT_SECRET = os.getenv("M2M_CLIENT_SECRET", "super-secret-cryptographic-key-change-in-prod")
 _m2m_jwt_token = None
