@@ -5,6 +5,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.Map;
@@ -13,7 +14,7 @@ import java.util.HashMap;
 @Component
 public class JwtUtil {
     private final String SECRET = "TalentStreamSuperSecretKeyForJWTGeneration2026!";
-    private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
+    private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
 
     public String generateToken(String username, String role) {
         return Jwts.builder()
@@ -43,7 +44,7 @@ public class JwtUtil {
     }
 
     private java.security.Key getSigningKey() {
-        byte[] keyBytes = SECRET.getBytes();
+        byte[] keyBytes = SECRET.getBytes(StandardCharsets.UTF_8);
         return io.jsonwebtoken.security.Keys.hmacShaKeyFor(keyBytes);
     }
 

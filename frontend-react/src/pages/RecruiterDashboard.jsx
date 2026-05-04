@@ -1,5 +1,4 @@
 import React from "react";
-// 👇 1. We must import all the Recharts components! 👇
 import {
   BarChart,
   Bar,
@@ -10,11 +9,9 @@ import {
   Cell,
 } from "recharts";
 
-// 👇 2. We must import the nested components! 👇
 import JobWorkspace from "../components/JobWorkspace";
 import JobCard from "../components/JobCard";
 
-// 👇 3. Renamed from Login to RecruiterDashboard 👇
 export default function RecruiterDashboard({
   recruiterTab,
   setRecruiterTab,
@@ -38,7 +35,7 @@ export default function RecruiterDashboard({
         />
       ) : (
         <div className="flex flex-col gap-8">
-          {/* 👇 RECRUITER SUB-NAVIGATION 👇 */}
+          {/* RECRUITER SUB-NAVIGATION */}
           <div className="flex gap-4 border-b border-slate-700 pb-4 mb-2">
             <button
               onClick={() => setRecruiterTab("jobs")}
@@ -133,7 +130,7 @@ export default function RecruiterDashboard({
               </div>
             </div>
           ) : (
-            // 👇 THE NEW ANALYTICS DASHBOARD 👇
+            // THE NEW ANALYTICS DASHBOARD
             <div className="w-full animate-in fade-in duration-300">
               {!analyticsData ? (
                 <div className="text-center py-20 text-slate-400">

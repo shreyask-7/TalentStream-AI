@@ -62,7 +62,7 @@ export default function Login({
       {/* CONDITIONAL RENDER: FEED vs APPLICATIONS */}
       {candidateTab === "feed" ? (
         <>
-          {/* 👇 MULTI-SELECT DROPDOwN FILTER 👇 */}
+          {/* MULTI-SELECT DROPDOwN FILTER */}
           {allSkills.length > 0 && (
             <div className="mb-6 relative z-30">
               <div className="flex flex-col md:flex-row md:items-center gap-4">
@@ -174,7 +174,7 @@ export default function Login({
               </div>
             </div>
           )}
-          {/* 👆 END MULTI-SELECT FILTER 👆 */}
+          {/* END MULTI-SELECT FILTER */}
 
           {/* RENDER THE FILTERED JOBS */}
           {filteredJobs.length === 0 ? (
@@ -277,7 +277,7 @@ export default function Login({
                   </div>
                 </div>
 
-                {/* 👇 NEW: PRODUCT EMPATHY & SKILL GAP ANALYSIS 👇 */}
+                {/* PRODUCT EMPATHY & SKILL GAP ANALYSIS */}
                 {app.status === "REJECTED" && (
                   <div className="mt-2 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
                     <div className="text-blue-400 mt-0.5">

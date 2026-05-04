@@ -24,7 +24,6 @@ public class Job {
     @Column(nullable = true)
     private String postedBy;
 
-    // Lombok's @Data already generates these, but we can keep them if you prefer explicit definitions!
     public String getPostedBy() { return postedBy; }
     public void setPostedBy(String postedBy) { this.postedBy = postedBy; }
 
