@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   postgres-db:
     image: postgres:16
@@ -56,8 +57,6 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   grafana:
     image: grafana/grafana:latest
@@ -77,6 +76,64 @@ services:
     container_name: talentstream-zipkin
     ports:
       - "9411:9411"
+
+  backend-java:
+    image: talentstream-backend-java
+    container_name: talentstream-backend-java
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres-db
+      - kafka
+      - zipkin
+    environment:
+      - DB_HOST=postgres-db
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+    volumes:
+      - shared_uploads:/app/uploads
+
+  ai-service:
+    image: talentstream-ai-service
+    container_name: talentstream-ai-service
+    ports:
+      - "5000:5000"
+    depends_on:
+      - kafka
+      - backend-java
+      - zipkin
+    environment:
+      - KAFKA_BROKER=kafka:29092
+      - BACKEND_URL=http://backend-java:8080
+      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - JAVA_BACKEND_DIR=/app
+    volumes:
+      - shared_uploads:/app/uploads
+
+  api-gateway:
+    image: talentstream-api-gateway
+    container_name: talentstream-api-gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      - backend-java
+      - redis
+      - zipkin
+    environment:
+      - REDIS_HOST=redis
+      - BACKEND_URI=http://backend-java:8080
+      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - FRONTEND_URL=http://localhost:5173
+
+  frontend-react:
+    image: talentstream-frontend
+    container_name: talentstream-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - api-gateway
+
 volumes:
   postgres_data:
   grafana_data:
+  shared_uploads:
