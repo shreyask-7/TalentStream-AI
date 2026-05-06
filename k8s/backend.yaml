@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-java
+spec:
+  selector:
+    app: backend-java
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-java
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-java
+  template:
+    metadata:
+      labels:
+        app: backend-java
+    spec:
+      containers:
+        - name: backend-java
+          image: acepk7/talentstream-backend-java:latest
+          env:
+            - name: DB_HOST
+              value: "postgres-db"
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka:9092"
+            - name: ZIPKIN_ENDPOINT
+              value: "http://zipkin:9411/api/v2/spans"
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: uploads-volume
+              mountPath: /app/uploads
+      volumes:
+        - name: uploads-volume
+          persistentVolumeClaim:
+            claimName: shared-uploads-pvc
