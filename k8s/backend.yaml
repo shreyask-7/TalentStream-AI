@@ -24,6 +24,13 @@ spec:
       labels:
         app: backend-java
     spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:latest
+          command: [ 'sh', '-c', "until nc -z postgres-db 5432; do echo waiting for postgres; sleep 2; done" ]
+        - name: wait-for-kafka
+          image: busybox:latest
+          command: [ 'sh', '-c', "until nc -z kafka 9092; do echo waiting for kafka; sleep 2; done" ]
       containers:
         - name: backend-java
           image: acepk7/talentstream-backend-java:latest

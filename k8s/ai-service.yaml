@@ -24,6 +24,13 @@ spec:
       labels:
         app: ai-service
     spec:
+      initContainers:
+        - name: wait-for-kafka
+          image: busybox:latest
+          command: [ 'sh', '-c', "until nc -z kafka 9092; do echo waiting for kafka; sleep 2; done" ]
+        - name: wait-for-java
+          image: busybox:latest
+          command: [ 'sh', '-c', "until nc -z backend-java 8080; do echo waiting for java; sleep 2; done" ]
       containers:
         - name: ai-service
           image: acepk7/talentstream-ai-service:latest
