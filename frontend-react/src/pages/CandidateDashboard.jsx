@@ -278,7 +278,7 @@ export default function Login({
                 </div>
 
                 {/* PRODUCT EMPATHY & SKILL GAP ANALYSIS */}
-                {app.status === "REJECTED" && (
+                {app.status === "REJECTED" && app.aiSkillGap && (
                   <div className="mt-2 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
                     <div className="text-blue-400 mt-0.5">
                       <svg
@@ -306,22 +306,24 @@ export default function Login({
                         skills.
                       </p>
 
-                      {/* If your backend sends a skillGap array, map it here. If not, this is a great placeholder! */}
-                      {app.skillGap && app.skillGap.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <span className="text-xs text-slate-400 py-1">
-                            Recommended Focus Areas:
-                          </span>
-                          {app.skillGap.map((skill, i) => (
-                            <span
-                              key={i}
-                              className="px-2 py-1 bg-slate-900 text-blue-300 border border-blue-500/20 rounded-md text-xs font-medium"
-                            >
-                              + {skill}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      {/* React magically turns the Python sentence into an array of Badges! */}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className="text-xs text-slate-400 py-1">
+                          Recommended Focus Areas:
+                        </span>
+                        {app.aiSkillGap.includes(":") &&
+                          app.aiSkillGap
+                            .split(":")[1] // Get everything after the colon
+                            .split(",") // Split by comma into an array
+                            .map((skill, i) => (
+                              <span
+                                key={i}
+                                className="px-2 py-1 bg-slate-900 text-blue-300 border border-blue-500/20 rounded-md text-xs font-medium uppercase tracking-wider"
+                              >
+                                {skill.replace(".", "").trim()}
+                              </span>
+                            ))}
+                      </div>
                     </div>
                   </div>
                 )}

@@ -41,6 +41,10 @@ spec:
               value: "http://backend-java:8080"
             - name: ZIPKIN_ENDPOINT
               value: "http://zipkin:9411/api/v2/spans"
+            - name: M2M_CLIENT_ID
+              value: "ai-vector-engine-v1"
+            - name: M2M_CLIENT_SECRET
+              value: "super-secret-cryptographic-key-change-in-prod"
             - name: JAVA_BACKEND_DIR
               value: "/app"
           ports:

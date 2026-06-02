@@ -37,6 +37,7 @@ This approach increases user-facing latency, blocks backend application threads,
 | **Kafka over REST callbacks** | Prevents backend thread blocking during heavy, unpredictable ML processing times. |
 | **Shared K8s PVC over S3** | Optimized for simpler v1 cluster deployment without creating external AWS IAM dependencies. Reduces external cloud provider coupling and simplifies local replication/testing, though S3 remains the target for production-grade horizontal scaling.|
 | **PostgreSQL** | Provides strong ACID consistency for critical user application state. |
+| **PostgreSQL, Kafka, Redis inside EKS** | For V1, PostgreSQL, Kafka, and Redis are self-hosted inside EKS to simplify deployment and reduce cloud service dependencies. Future iterations may migrate these components to managed services such as RDS, MSK, and ElastiCache. |
 
 ---
 
@@ -45,7 +46,8 @@ This approach increases user-facing latency, blocks backend application threads,
 ### 1. High-Level Design (HLD)
 ![High Level Architecture](./architecture-diagrams/hld.png)
 
-### 2. Sequence Flow (Candidate Upload Lifecycle)
+### 2. Sequence Flow
+#### 2.1 Candidate Upload Lifecycle
 ```mermaid
 sequenceDiagram
     autonumber
@@ -76,6 +78,61 @@ sequenceDiagram
     Java->>Java: Validate M2M Token
     Java->>DB: UPDATE Application (Status: COMPLETED, Score)
     Java-->>Python: HTTP 200 OK
+```
+
+#### 2.2 Recruiter Job Posting Lifecycle
+```mermaid
+sequenceDiagram
+autonumber
+actor Recruiter
+participant React as React Frontend
+participant Gateway as API Gateway
+participant Java as Java Backend
+participant DB as PostgreSQL
+participant Kafka as Kafka Broker
+participant Python as Python AI Service
+
+    %% ========================================
+    %% 1. RECRUITER JOB POSTING FLOW
+    %% ========================================
+    Recruiter->>React: Submit Job Description
+    activate React
+    React->>Gateway: POST /api/jobs (Header: Bearer JWT)
+    activate Gateway
+    
+    Gateway->>Gateway: Validate JWT Signature
+    Gateway->>Java: Route Request
+    activate Java
+
+    Java->>DB: INSERT Job (Status: PENDING_BADGES)
+    Java->>Kafka: Publish Event: 'job.created'
+    
+    Java-->>Gateway: HTTP 202 Accepted
+    deactivate Java
+    Gateway-->>React: HTTP 202 Accepted
+    deactivate Gateway
+    React-->>Recruiter: Show "Generating Badges..." UI
+    deactivate React
+
+    %% ========================================
+    %% 2. AI PARSING FLOW (ASYNCHRONOUS)
+    %% ========================================
+    Note over Kafka,Python: Background Async Parsing
+    
+    Kafka-->>Python: Consume 'job.created' Event
+    activate Python
+    Python->>Python: Extract Job Skill Badges (KeyBERT)
+    
+    %% ========================================
+    %% 3. M2M CALLBACK & DB UPDATE
+    %% ========================================
+    Python->>Java: POST /api/internal/jobs/badges (Header: M2M Token)
+    activate Java
+    Java->>Java: Validate M2M Token
+    Java->>DB: UPDATE Job (Add Badges, Status: ACTIVE)
+    Java-->>Python: HTTP 200 OK
+    deactivate Java
+    deactivate Python
 ```
 
 ### 3. Deployment Architecture & CI/CD
